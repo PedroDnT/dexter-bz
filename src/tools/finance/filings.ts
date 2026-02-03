@@ -3,16 +3,22 @@ import { z } from 'zod';
 import { callApi } from './api.js';
 import { ITEMS_10K_MAP, ITEMS_10Q_MAP, formatItemsDescription } from './constants.js';
 import { formatToolResult } from '../types.js';
+import { isBrazilTicker } from './market.js';
+import { getCvmFilings, getCvmFilingItems } from './providers/cvm.js';
+
+export function shouldUseCvmFilings(ticker: string, filingType?: string): boolean {
+  return isBrazilTicker(ticker) || ['DFP', 'ITR', 'FRE', 'IPE'].includes(filingType || '');
+}
 
 const FilingsInputSchema = z.object({
   ticker: z
     .string()
     .describe("The stock ticker symbol to fetch filings for. For example, 'AAPL' for Apple."),
   filing_type: z
-    .enum(['10-K', '10-Q', '8-K'])
+    .enum(['10-K', '10-Q', '8-K', 'DFP', 'ITR', 'FRE', 'IPE'])
     .optional()
     .describe(
-      "REQUIRED when searching for a specific filing type. Use '10-K' for annual reports, '10-Q' for quarterly reports, or '8-K' for current reports. If omitted, returns most recent filings of ANY type."
+      "REQUIRED when searching for a specific filing type. Use '10-K' for annual reports, '10-Q' for quarterly reports, '8-K' for current reports. For Brazil: 'DFP' (annual), 'ITR' (quarterly), 'FRE' (reference form), 'IPE' (event filings). If omitted, returns most recent filings of ANY type."
     ),
   limit: z
     .number()
@@ -24,9 +30,17 @@ const FilingsInputSchema = z.object({
 
 export const getFilings = new DynamicStructuredTool({
   name: 'get_filings',
-  description: `Retrieves metadata for SEC filings for a company. Returns accession numbers, filing types, and document URLs. This tool ONLY returns metadata - it does NOT return the actual text content from filings. To retrieve text content, use the specific filing items tools: get_10K_filing_items, get_10Q_filing_items, or get_8K_filing_items.`,
+  description: `Retrieves metadata for filings for a company. Returns accession numbers, filing types, and document URLs. Supports SEC filings (10-K, 10-Q, 8-K) and Brazil CVM filings (DFP, ITR, FRE, IPE). This tool ONLY returns metadata - it does NOT return the actual text content from filings. To retrieve text content or document links, use the specific filing items tools.`,
   schema: FilingsInputSchema,
   func: async (input) => {
+    if (shouldUseCvmFilings(input.ticker, input.filing_type)) {
+      const { filings, sourceUrls } = await getCvmFilings({
+        ticker: input.ticker,
+        filingTypes: input.filing_type ? [input.filing_type as 'DFP' | 'ITR' | 'FRE' | 'IPE'] : undefined,
+        limit: input.limit,
+      });
+      return formatToolResult(filings, sourceUrls);
+    }
     const params: Record<string, string | number | undefined> = {
       ticker: input.ticker,
       limit: input.limit,
@@ -53,6 +67,14 @@ export const get10KFilingItems = new DynamicStructuredTool({
   description: `Retrieves specific sections (items) from a company's 10-K annual report. Use this to extract detailed information from specific sections of a 10-K filing, such as: Item-1: Business, Item-1A: Risk Factors, Item-7: Management's Discussion and Analysis, Item-8: Financial Statements and Supplementary Data. The optional 'item' parameter allows you to filter for specific sections.`,
   schema: Filing10KItemsInputSchema,
   func: async (input) => {
+    if (isBrazilTicker(input.ticker)) {
+      const { data, sourceUrls } = await getCvmFilingItems({
+        ticker: input.ticker,
+        filingType: 'DFP',
+        year: input.year,
+      });
+      return formatToolResult(data, sourceUrls);
+    }
     const params: Record<string, string | number | string[] | undefined> = {
       ticker: input.ticker.toUpperCase(),
       filing_type: '10-K',
@@ -81,6 +103,15 @@ export const get10QFilingItems = new DynamicStructuredTool({
   description: `Retrieves specific sections (items) from a company's 10-Q quarterly report. Use this to extract detailed information from specific sections of a 10-Q filing, such as: Item-1: Financial Statements, Item-2: Management's Discussion and Analysis, Item-3: Quantitative and Qualitative Disclosures About Market Risk, Item-4: Controls and Procedures.`,
   schema: Filing10QItemsInputSchema,
   func: async (input) => {
+    if (isBrazilTicker(input.ticker)) {
+      const { data, sourceUrls } = await getCvmFilingItems({
+        ticker: input.ticker,
+        filingType: 'ITR',
+        year: input.year,
+        quarter: input.quarter,
+      });
+      return formatToolResult(data, sourceUrls);
+    }
     const params: Record<string, string | number | string[] | undefined> = {
       ticker: input.ticker.toUpperCase(),
       filing_type: '10-Q',
@@ -107,6 +138,14 @@ export const get8KFilingItems = new DynamicStructuredTool({
   description: `Retrieves specific sections (items) from a company's 8-K current report. 8-K filings report material events such as acquisitions, financial results, management changes, and other significant corporate events. The accession_number parameter can be retrieved using the get_filings tool by filtering for 8-K filings.`,
   schema: Filing8KItemsInputSchema,
   func: async (input) => {
+    if (isBrazilTicker(input.ticker)) {
+      const { data, sourceUrls } = await getCvmFilingItems({
+        ticker: input.ticker,
+        filingType: 'IPE',
+        accession_number: input.accession_number,
+      });
+      return formatToolResult(data, sourceUrls);
+    }
     const params: Record<string, string | undefined> = {
       ticker: input.ticker.toUpperCase(),
       filing_type: '8-K',
@@ -116,4 +155,3 @@ export const get8KFilingItems = new DynamicStructuredTool({
     return formatToolResult(data, [url]);
   },
 });
-

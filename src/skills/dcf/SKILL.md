@@ -55,6 +55,8 @@ Call the `financial_search` tool with these queries:
 
 **Extract:** `price`
 
+**Brazil note:** If `_usd` fields exist, run valuation in USD and report both USD and BRL using the provided PTAX rate (latest, not period-end).
+
 ### 1.6 Company Facts
 **Query:** `"[TICKER] company facts"`
 

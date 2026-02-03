@@ -2,6 +2,8 @@ import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { callApi } from './api.js';
 import { formatToolResult } from '../types.js';
+import { isBrazilTicker } from './market.js';
+import { recordBrazilGap } from './brazil-features.js';
 
 const SegmentedRevenuesInputSchema = z.object({
   ticker: z
@@ -22,6 +24,13 @@ export const getSegmentedRevenues = new DynamicStructuredTool({
   description: `Provides a detailed breakdown of a company's revenue by operating segments, such as products, services, or geographic regions. Useful for analyzing the composition of a company's revenue.`,
   schema: SegmentedRevenuesInputSchema,
   func: async (input) => {
+    if (isBrazilTicker(input.ticker)) {
+      recordBrazilGap('Segmented revenues (Brazil)', 'No reliable structured source yet; consider CVM parsing or vendor coverage.');
+      return formatToolResult(
+        { segmented_revenues: [], note: 'Segmented revenues not available for Brazil (best-effort).' },
+        []
+      );
+    }
     const params = {
       ticker: input.ticker,
       period: input.period,
@@ -31,4 +40,3 @@ export const getSegmentedRevenues = new DynamicStructuredTool({
     return formatToolResult(data.segmented_revenues || {}, [url]);
   },
 });
-

@@ -89,6 +89,10 @@ cp env.example .env
 # Other required keys
 # FINANCIAL_DATASETS_API_KEY=your-financial-datasets-api-key
 
+# Brazil (B3) support
+# BRAPI_TOKEN=your-brapi-token
+# YFINANCE_PYTHON_BIN=python3
+
 # Web Search (Exa preferred, Tavily fallback)
 # EXASEARCH_API_KEY=your-exa-api-key
 # TAVILY_API_KEY=your-tavily-api-key
@@ -105,6 +109,18 @@ Or with watch mode for development:
 ```bash
 bun dev
 ```
+
+## 🇧🇷 Brazil (B3) Support
+
+Dexter can fetch Brazil-market data via BRAPI and Yahoo Finance (yfinance).
+
+Requirements:
+- **BRAPI_TOKEN** set in `.env`
+- Python with `yfinance` installed (`pip install -r scripts/yfinance/requirements.txt`)
+- Optional `YFINANCE_PYTHON_BIN` if your Python executable is not `python3`
+
+Currency:
+- Brazil outputs include **BRL** values and **USD** equivalents using the **latest PTAX (BCB)** rate.
 
 ## 📊 How to Evaluate
 

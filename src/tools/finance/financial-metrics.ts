@@ -36,6 +36,7 @@ Given a user's natural language query about financial statements or metrics, cal
 1. **Ticker Resolution**: Convert company names to ticker symbols:
    - Apple → AAPL, Tesla → TSLA, Microsoft → MSFT, Amazon → AMZN
    - Google/Alphabet → GOOGL, Meta/Facebook → META, Nvidia → NVDA
+   - Brazil tickers may be like PETR4 or PETR4.SA (B3). Both are acceptable.
 
 2. **Date Inference**: Convert relative dates to YYYY-MM-DD format:
    - "last year" → report_period_gte 1 year ago
@@ -60,6 +61,9 @@ Given a user's natural language query about financial statements or metrics, cal
    - Prefer specific statement tools over get_all_financial_statements when possible
    - Use get_all_financial_statements when multiple statement types are needed
    - For comparisons between companies, call the same tool for each ticker
+
+6. **Brazil Currency**:
+   - Brazil financial outputs include BRL values plus *_usd converted using latest PTAX
 
 Call the appropriate tool(s) now.`;
 }
