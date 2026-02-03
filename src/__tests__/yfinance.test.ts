@@ -4,7 +4,7 @@ import { jest } from '@jest/globals';
 
 const mockSpawn = jest.fn();
 
-jest.unstable_mockModule('child_process', () => ({
+jest.mock('child_process', () => ({
   spawn: mockSpawn,
 }));
 
