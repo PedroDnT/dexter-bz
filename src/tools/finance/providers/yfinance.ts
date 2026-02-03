@@ -108,3 +108,7 @@ export async function yfinanceStatements(params: {
 }): Promise<unknown> {
   return callYfinance({ action: 'statements', ...params });
 }
+
+export async function yfinanceSearch(query: string): Promise<unknown> {
+  return callYfinance({ action: 'search', query });
+}

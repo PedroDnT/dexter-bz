@@ -122,6 +122,25 @@ Requirements:
 Currency:
 - Brazil outputs include **BRL** values and **USD** equivalents using the **latest PTAX (BCB)** rate.
 
+## 🕵️ Fraud / Anomaly Screening (Investigation Pipeline)
+
+Dexter can run a deterministic “red-flag” screening over public-market data (prices, fundamentals, filings metadata).
+
+Run the full pipeline (setup → investigations → HTML reports):
+```bash
+bun run investigate --open
+```
+
+Outputs:
+- Per-target report: `.dexter/reports/<run-id>/<target>/report.html`
+- Run index: `.dexter/reports/<run-id>/index.html`
+- Latest shortcut: `.dexter/reports/latest/index.html`
+
+Targets config:
+- `investigations/targets.json`
+
+**Important**: This is heuristic anomaly screening, not proof of fraud. Treat outputs as leads that require verification using primary filings (SEC/CVM) and independent corroboration.
+
 ## 📊 How to Evaluate
 
 Dexter includes an evaluation suite that tests the agent against a dataset of financial questions. Evals use LangSmith for tracking and an LLM-as-judge approach for scoring correctness.

@@ -1,0 +1,10 @@
+{
+  "targets": [
+    { "label": "Banco Master (name search)", "query": "Banco Master" },
+    { "label": "REAG (name search)", "query": "REAG" },
+    { "label": "Petrobras (PETR4)", "query": "PETR4" },
+    { "label": "Vale (VALE3)", "query": "VALE3" },
+    { "label": "Itaú Unibanco (ITUB4)", "query": "ITUB4" }
+  ]
+}
+
