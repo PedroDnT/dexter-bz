@@ -1,10 +1,12 @@
+import { describe, it, expect, mock } from 'bun:test';
 import { EventEmitter } from 'events';
 import { Readable, Writable } from 'stream';
-import { jest } from '@jest/globals';
 
-const mockSpawn = jest.fn();
+const mockSpawn = mock(() => {
+  throw new Error('mockSpawn not implemented');
+});
 
-jest.unstable_mockModule('child_process', () => ({
+mock.module('child_process', () => ({
   spawn: mockSpawn,
 }));
 
