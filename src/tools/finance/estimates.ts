@@ -2,6 +2,8 @@ import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { callApi } from './api.js';
 import { formatToolResult } from '../types.js';
+import { isBrazilTicker, normalizeTicker, toYahooSymbol } from './market.js';
+import { yfinanceEstimates } from './providers/yfinance.js';
 
 const AnalystEstimatesInputSchema = z.object({
   ticker: z
@@ -20,6 +22,12 @@ export const getAnalystEstimates = new DynamicStructuredTool({
   description: `Retrieves analyst estimates for a given company ticker, including metrics like estimated EPS. Useful for understanding consensus expectations, assessing future growth prospects, and performing valuation analysis.`,
   schema: AnalystEstimatesInputSchema,
   func: async (input) => {
+    if (isBrazilTicker(input.ticker)) {
+      const normalized = normalizeTicker(input.ticker);
+      const symbol = toYahooSymbol(normalized.canonical);
+      const estimates = await yfinanceEstimates(symbol);
+      return formatToolResult(estimates || [], ['https://finance.yahoo.com']);
+    }
     const params = {
       ticker: input.ticker,
       period: input.period,
@@ -28,4 +36,3 @@ export const getAnalystEstimates = new DynamicStructuredTool({
     return formatToolResult(data.analyst_estimates || [], [url]);
   },
 });
-

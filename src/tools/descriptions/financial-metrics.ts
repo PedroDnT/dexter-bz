@@ -13,6 +13,7 @@ Intelligent meta-tool for fundamental analysis and financial metrics. Takes a na
 - Financial metrics (P/E ratio, EV/EBITDA, ROE, ROA, margins, dividend yield)
 - Trend analysis across multiple periods
 - Multi-company fundamental comparisons
+- Brazil tickers (B3) with BRL + USD (PTAX) outputs
 
 ## When NOT to Use
 

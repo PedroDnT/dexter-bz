@@ -2,6 +2,9 @@ import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { callApi } from './api.js';
 import { formatToolResult } from '../types.js';
+import { isBrazilTicker } from './market.js';
+import { getCvmFilings } from './providers/cvm.js';
+import { recordBrazilGap } from './brazil-features.js';
 
 const InsiderTradesInputSchema = z.object({
   ticker: z
@@ -38,6 +41,17 @@ export const getInsiderTrades = new DynamicStructuredTool({
   description: `Retrieves insider trading transactions for a given company ticker. Insider trades include purchases and sales of company stock by executives, directors, and other insiders. This data is sourced from SEC Form 4 filings. Use filing_date filters to narrow down results by date range.`,
   schema: InsiderTradesInputSchema,
   func: async (input) => {
+    if (isBrazilTicker(input.ticker)) {
+      const { filings, sourceUrls } = await getCvmFilings({
+        ticker: input.ticker,
+        filingTypes: ['IPE'],
+        limit: input.limit,
+      });
+      if (filings.length === 0) {
+        recordBrazilGap('Insider trades (Brazil)', 'IPE filings do not reliably map to insider trades; needs better CVM mapping.');
+      }
+      return formatToolResult(filings, sourceUrls);
+    }
     const params: Record<string, string | number | undefined> = {
       ticker: input.ticker.toUpperCase(),
       limit: input.limit,

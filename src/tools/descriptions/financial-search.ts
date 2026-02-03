@@ -18,6 +18,7 @@ Intelligent meta-tool for financial data research. Takes a natural language quer
 - Cryptocurrency prices
 - Revenue segment breakdowns
 - Multi-company comparisons (pass the full query, it handles routing internally)
+- Brazil tickers (B3, e.g., PETR4 or PETR4.SA) with BRL + USD (PTAX) outputs
 
 ## When NOT to Use
 

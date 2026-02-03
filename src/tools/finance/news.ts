@@ -2,6 +2,8 @@ import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { callApi } from './api.js';
 import { formatToolResult } from '../types.js';
+import { isBrazilTicker, normalizeTicker, toYahooSymbol } from './market.js';
+import { yfinanceNews } from './providers/yfinance.js';
 
 const NewsInputSchema = z.object({
   ticker: z
@@ -23,6 +25,13 @@ export const getNews = new DynamicStructuredTool({
   description: `Retrieves recent news articles for a given company ticker, covering financial announcements, market trends, and other significant events. Useful for staying up-to-date with market-moving information and investor sentiment.`,
   schema: NewsInputSchema,
   func: async (input) => {
+    if (isBrazilTicker(input.ticker)) {
+      const normalized = normalizeTicker(input.ticker);
+      const symbol = toYahooSymbol(normalized.canonical);
+      const news = (await yfinanceNews(symbol)) as Array<unknown>;
+      const limited = Array.isArray(news) ? news.slice(0, input.limit) : news;
+      return formatToolResult(limited || [], ['https://finance.yahoo.com']);
+    }
     const params: Record<string, string | number | undefined> = {
       ticker: input.ticker,
       limit: input.limit,
