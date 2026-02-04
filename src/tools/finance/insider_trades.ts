@@ -47,10 +47,17 @@ export const getInsiderTrades = new DynamicStructuredTool({
         filingTypes: ['IPE'],
         limit: input.limit,
       });
+      const note =
+        filings.length === 0
+          ? 'No CVM IPE disclosures found for this issuer.'
+          : 'CVM IPE disclosures are event filings and do not map 1:1 to SEC Form 4 insider trades.';
       if (filings.length === 0) {
-        recordBrazilGap('Insider trades (Brazil)', 'IPE filings do not reliably map to insider trades; needs better CVM mapping.');
+        recordBrazilGap(
+          'Insider trades (Brazil)',
+          'IPE filings do not reliably map to insider trades; only disclosure metadata is available.'
+        );
       }
-      return formatToolResult(filings, sourceUrls);
+      return formatToolResult({ disclosures: filings, note }, sourceUrls);
     }
     const params: Record<string, string | number | undefined> = {
       ticker: input.ticker.toUpperCase(),

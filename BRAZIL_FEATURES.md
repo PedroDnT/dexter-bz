@@ -11,7 +11,7 @@
 
 ## Best-effort / known gaps
 - **Segmented revenues (Brazil)**: No reliable structured source yet; consider CVM parsing or vendor coverage.
-- **Insider trades (Brazil)**: IPE filings do not reliably map to insider trades; needs better CVM mapping.
+- **Insider trades (Brazil)**: IPE disclosure metadata only; no transaction-level dataset yet.
 - **Historical key ratios (Brazil)**: Only snapshot-level ratios are returned today.
 - **CVM filings text extraction**: Only metadata + document links returned; itemized parsing is not implemented.
 - **ADR/BDR mapping**: ADR/BDR symbols (e.g., PBR) are treated as US unless mapped explicitly.
