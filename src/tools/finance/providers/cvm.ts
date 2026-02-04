@@ -12,6 +12,28 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const BRAZIL_DOC_TYPES = ['DFP', 'ITR', 'FRE', 'IPE'] as const;
 export type BrazilDocType = (typeof BRAZIL_DOC_TYPES)[number];
 
+export type CvmStatementType = 'income_statement' | 'balance_sheet' | 'cash_flow' | 'other';
+export type CvmConsolidation = 'consolidated' | 'individual' | 'unknown';
+
+export interface CvmStatementEntry {
+  report_period?: string | null;
+  statement_type: CvmStatementType;
+  account_code?: string | null;
+  account_name?: string | null;
+  value?: number | null;
+  consolidation?: CvmConsolidation;
+  period_order?: string | null;
+  currency?: string | null;
+  source_file?: string | null;
+}
+
+export interface CvmStatements {
+  income_statement: CvmStatementEntry[];
+  balance_sheet: CvmStatementEntry[];
+  cash_flow: CvmStatementEntry[];
+  other?: CvmStatementEntry[];
+}
+
 export interface CvmFiling {
   accession_number?: string | null;
   filing_type: BrazilDocType;
@@ -22,14 +44,14 @@ export interface CvmFiling {
   company?: string | null;
 }
 
-interface CompanyIdentifiers {
+export interface CvmCompanyIdentifiers {
   ticker: string;
   cd_cvm?: string;
   cnpj?: string;
   denom?: string;
 }
 
-const companyCache = new Map<string, CompanyIdentifiers | null>();
+const companyCache = new Map<string, CvmCompanyIdentifiers | null>();
 
 function ensureCacheDir(): void {
   if (!existsSync(CACHE_DIR)) {
@@ -101,7 +123,7 @@ function extractField(row: Record<string, string>, patterns: string[]): string |
   return value ?? null;
 }
 
-function matchesCompany(row: Record<string, string>, identifiers: CompanyIdentifiers): boolean {
+function matchesCompany(row: Record<string, string>, identifiers: CvmCompanyIdentifiers): boolean {
   const keys = Object.keys(row);
   const cdCvmKey = findColumn(keys, ['CD_CVM', 'COD_CVM', 'CVM']);
   if (identifiers.cd_cvm && cdCvmKey && row[cdCvmKey] === identifiers.cd_cvm) return true;
@@ -127,7 +149,134 @@ function matchesCompany(row: Record<string, string>, identifiers: CompanyIdentif
   return false;
 }
 
-async function resolveCompanyIdentifiers(ticker: string): Promise<CompanyIdentifiers | null> {
+function parseBrazilNumber(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const normalized = trimmed.replace(/\./g, '').replace(',', '.');
+  const num = Number(normalized);
+  return Number.isFinite(num) ? num : null;
+}
+
+function normalizeDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    return trimmed.slice(0, 10);
+  }
+  const match = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (match) {
+    return `${match[3]}-${match[2]}-${match[1]}`;
+  }
+  return trimmed;
+}
+
+function parseReportPeriod(row: Record<string, string>): string | null {
+  const raw = extractField(row, [
+    'DT_REFER',
+    'DT_REF',
+    'DT_FIM_EXERC',
+    'DT_FIM_EXERCICIO',
+    'DT_FIM_EXERC_SOCIAL',
+  ]);
+  return normalizeDate(raw);
+}
+
+function matchesYearQuarter(reportPeriod: string | null, year?: number, quarter?: number): boolean {
+  if (!year && !quarter) return true;
+  if (!reportPeriod) return false;
+  const date = new Date(reportPeriod);
+  if (Number.isNaN(date.getTime())) return false;
+  if (year && date.getFullYear() !== year) return false;
+  if (quarter) {
+    const q = Math.ceil((date.getMonth() + 1) / 3);
+    if (q !== quarter) return false;
+  }
+  return true;
+}
+
+function detectStatementType(entryName: string): { type: CvmStatementType; consolidation: CvmConsolidation } | null {
+  const name = entryName.toLowerCase();
+  const consolidation: CvmConsolidation = name.includes('_con')
+    ? 'consolidated'
+    : name.includes('_ind')
+      ? 'individual'
+      : 'unknown';
+
+  if (name.includes('dre')) return { type: 'income_statement', consolidation };
+  if (name.includes('bpa') || name.includes('bpp')) return { type: 'balance_sheet', consolidation };
+  if (name.includes('dfc')) return { type: 'cash_flow', consolidation };
+  if (name.includes('dva')) return { type: 'other', consolidation };
+  return null;
+}
+
+export function extractCvmStatementsFromZip(
+  zip: AdmZip,
+  identifiers: CvmCompanyIdentifiers,
+  options: { year?: number; quarter?: number } = {}
+): { statements: CvmStatements; sourceFiles: string[] } {
+  const statements: CvmStatements = {
+    income_statement: [],
+    balance_sheet: [],
+    cash_flow: [],
+    other: [],
+  };
+  const sourceFiles: string[] = [];
+
+  const entries = zip.getEntries().filter((e) => e.entryName.toLowerCase().endsWith('.csv'));
+  for (const entry of entries) {
+    const statementInfo = detectStatementType(entry.entryName);
+    if (!statementInfo) continue;
+
+    const csvText = decodeCsv(entry.getData());
+    const rows = parseCsvRows(csvText);
+    if (rows.length === 0) continue;
+
+    const keys = Object.keys(rows[0]);
+    const accountCodeKey = findColumn(keys, ['CD_CONTA', 'COD_CONTA', 'CD_CONTA_PADRAO']);
+    const accountNameKey = findColumn(keys, ['DS_CONTA', 'DESC_CONTA', 'DS_CONTA_PADRAO']);
+    const valueKey = findColumn(keys, ['VL_CONTA', 'VL_CONTA_MOV', 'VALOR', 'VL_CONTA_PADRAO']);
+    const currencyKey = findColumn(keys, ['MOEDA', 'CD_MOEDA']);
+    const orderKey = findColumn(keys, ['ORDEM_EXERC', 'ORDEM_EXERCICIO']);
+
+    if (!valueKey || !accountNameKey) continue;
+
+    sourceFiles.push(entry.entryName);
+
+    for (const row of rows) {
+      if (!matchesCompany(row, identifiers)) continue;
+      const reportPeriod = parseReportPeriod(row);
+      if (!matchesYearQuarter(reportPeriod, options.year, options.quarter)) continue;
+
+      const entryValue: CvmStatementEntry = {
+        report_period: reportPeriod,
+        statement_type: statementInfo.type,
+        account_code: accountCodeKey ? row[accountCodeKey] ?? null : null,
+        account_name: accountNameKey ? row[accountNameKey] ?? null : null,
+        value: parseBrazilNumber(row[valueKey]),
+        consolidation: statementInfo.consolidation,
+        period_order: orderKey ? row[orderKey] ?? null : null,
+        currency: currencyKey ? row[currencyKey] ?? null : null,
+        source_file: entry.entryName,
+      };
+
+      if (statementInfo.type === 'income_statement') {
+        statements.income_statement.push(entryValue);
+      } else if (statementInfo.type === 'balance_sheet') {
+        statements.balance_sheet.push(entryValue);
+      } else if (statementInfo.type === 'cash_flow') {
+        statements.cash_flow.push(entryValue);
+      } else {
+        statements.other?.push(entryValue);
+      }
+    }
+  }
+
+  return { statements, sourceFiles };
+}
+
+async function resolveCompanyIdentifiers(ticker: string): Promise<CvmCompanyIdentifiers | null> {
   const normalized = normalizeTicker(ticker);
   if (companyCache.has(normalized.canonical)) {
     return companyCache.get(normalized.canonical) || null;
@@ -165,7 +314,7 @@ async function resolveCompanyIdentifiers(ticker: string): Promise<CompanyIdentif
           const cd_cvm = extractField(row, ['CD_CVM', 'COD_CVM', 'CVM']) ?? undefined;
           const cnpj = extractField(row, ['CNPJ_CIA', 'CNPJ']) ?? undefined;
           const denom = extractField(row, ['DENOM_CIA', 'DENOM', 'NOME_CIA', 'NOME']) ?? undefined;
-          const identifiers: CompanyIdentifiers = {
+          const identifiers: CvmCompanyIdentifiers = {
             ticker: normalized.canonical,
             cd_cvm,
             cnpj,
@@ -268,6 +417,47 @@ export async function getCvmFilings(params: {
   return { filings: sorted.slice(0, limit), sourceUrls };
 }
 
+export async function getCvmStatements(params: {
+  ticker: string;
+  filingType: BrazilDocType;
+  year?: number;
+  quarter?: number;
+}): Promise<{ statements: CvmStatements; sourceUrls: string[]; note?: string }> {
+  if (params.filingType !== 'DFP' && params.filingType !== 'ITR') {
+    return {
+      statements: { income_statement: [], balance_sheet: [], cash_flow: [] },
+      sourceUrls: [],
+      note: 'Statements are only available for DFP (annual) and ITR (quarterly).',
+    };
+  }
+
+  const identifiers = await resolveCompanyIdentifiers(params.ticker);
+  if (!identifiers) {
+    return {
+      statements: { income_statement: [], balance_sheet: [], cash_flow: [] },
+      sourceUrls: [],
+      note: 'Unable to resolve company identifiers for CVM statement extraction.',
+    };
+  }
+
+  const year = params.year ?? new Date().getFullYear();
+  const { path, url } = await downloadZip(params.filingType, year);
+  const zip = new AdmZip(path);
+  const { statements } = extractCvmStatementsFromZip(zip, identifiers, { year, quarter: params.quarter });
+
+  const hasData =
+    statements.income_statement.length > 0 ||
+    statements.balance_sheet.length > 0 ||
+    statements.cash_flow.length > 0 ||
+    (statements.other?.length ?? 0) > 0;
+
+  return {
+    statements,
+    sourceUrls: [url],
+    note: hasData ? undefined : 'No statement rows found in CVM datasets for the requested period.',
+  };
+}
+
 export async function getCvmFilingItems(params: {
   ticker: string;
   filingType: BrazilDocType;
@@ -303,12 +493,31 @@ export async function getCvmFilingItems(params: {
     return true;
   });
 
+  let statementsResult: { statements: CvmStatements; sourceUrls: string[]; note?: string } | null = null;
+  if (params.filingType === 'DFP' || params.filingType === 'ITR') {
+    statementsResult = await getCvmStatements({
+      ticker: params.ticker,
+      filingType: params.filingType,
+      year,
+      quarter,
+    });
+  }
+
+  const notes: string[] = ['CVM filings do not use SEC item structure. Returning document links and metadata.'];
+  if (params.filingType === 'IPE') {
+    notes.push('IPE is an event disclosure; statement tables are not available.');
+  }
+  if (statementsResult?.note) notes.push(statementsResult.note);
+
+  const mergedUrls = [...sourceUrls, ...(statementsResult?.sourceUrls ?? [])];
+
   return {
     data: {
-      note: 'CVM filings do not use SEC item structure. Returning document links and metadata.',
+      note: notes.join(' '),
       filing_type: params.filingType,
       documents: filtered,
+      statements: statementsResult?.statements,
     },
-    sourceUrls,
+    sourceUrls: mergedUrls,
   };
 }
