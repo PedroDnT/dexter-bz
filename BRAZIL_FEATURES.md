@@ -11,7 +11,7 @@
 - PTAX FX conversion metadata on Brazil outputs
 
 ## Best-effort / known gaps
-- **Segmented revenues (Brazil)**: No reliable structured source yet; consider CVM parsing or vendor coverage.
+- **Segmented revenues (Brazil)**: Best-effort CVM segment extraction; often empty depending on issuer disclosures.
 - **Insider trades (Brazil)**: IPE filings do not reliably map to insider trades; needs better CVM mapping.
 - **Historical key ratios (Brazil)**: Only snapshot-level ratios are returned today.
 - **CVM filings text extraction**: Only statement tables + document links returned; narrative item parsing is not implemented.

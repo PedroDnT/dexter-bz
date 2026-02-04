@@ -4,6 +4,7 @@ import { callApi } from './api.js';
 import { formatToolResult } from '../types.js';
 import { isBrazilTicker } from './market.js';
 import { recordBrazilGap } from './brazil-features.js';
+import { getCvmSegmentedRevenues } from './providers/cvm.js';
 
 const SegmentedRevenuesInputSchema = z.object({
   ticker: z
@@ -25,10 +26,23 @@ export const getSegmentedRevenues = new DynamicStructuredTool({
   schema: SegmentedRevenuesInputSchema,
   func: async (input) => {
     if (isBrazilTicker(input.ticker)) {
-      recordBrazilGap('Segmented revenues (Brazil)', 'No reliable structured source yet; consider CVM parsing or vendor coverage.');
+      const year = new Date().getFullYear();
+      const { segments, sourceUrls, note } = await getCvmSegmentedRevenues({
+        ticker: input.ticker,
+        year,
+      });
+      if (segments.length === 0) {
+        recordBrazilGap(
+          'Segmented revenues (Brazil)',
+          note || 'No segment data found in CVM DFP/ITR datasets for the current year.'
+        );
+      }
       return formatToolResult(
-        { segmented_revenues: [], note: 'Segmented revenues not available for Brazil (best-effort).' },
-        []
+        {
+          segmented_revenues: segments,
+          note: note || `Segmented revenues best-effort from CVM DFP/ITR (${year}).`,
+        },
+        sourceUrls
       );
     }
     const params = {

@@ -34,6 +34,14 @@ export interface CvmStatements {
   other?: CvmStatementEntry[];
 }
 
+export interface CvmSegmentEntry {
+  report_period?: string | null;
+  segment?: string | null;
+  value?: number | null;
+  metric?: string | null;
+  source_file?: string | null;
+}
+
 export interface CvmFiling {
   accession_number?: string | null;
   filing_type: BrazilDocType;
@@ -276,6 +284,51 @@ export function extractCvmStatementsFromZip(
   return { statements, sourceFiles };
 }
 
+export function extractCvmSegmentsFromZip(
+  zip: AdmZip,
+  identifiers: CvmCompanyIdentifiers,
+  options: { year?: number; quarter?: number } = {}
+): { segments: CvmSegmentEntry[]; sourceFiles: string[] } {
+  const segments: CvmSegmentEntry[] = [];
+  const sourceFiles: string[] = [];
+
+  const entries = zip.getEntries().filter((e) => e.entryName.toLowerCase().endsWith('.csv'));
+  for (const entry of entries) {
+    const lowerName = entry.entryName.toLowerCase();
+    if (!/seg|segment/i.test(lowerName)) continue;
+
+    const csvText = decodeCsv(entry.getData());
+    const rows = parseCsvRows(csvText);
+    if (rows.length === 0) continue;
+
+    const keys = Object.keys(rows[0]);
+    const segmentKey = findColumn(keys, ['SEGMENTO', 'DS_SEGMENTO', 'SEGMENT', 'DS_AREA', 'NEGOCIO', 'LINHA']);
+    const valueKey = findColumn(keys, ['VL_RECEITA', 'VL_REC', 'VL_CONTA', 'VALOR', 'VL_LIQ']);
+    if (!segmentKey || !valueKey) continue;
+
+    sourceFiles.push(entry.entryName);
+
+    for (const row of rows) {
+      if (!matchesCompany(row, identifiers)) continue;
+      const reportPeriod = parseReportPeriod(row);
+      if (!matchesYearQuarter(reportPeriod, options.year, options.quarter)) continue;
+      const segment = row[segmentKey] ?? null;
+      const value = parseBrazilNumber(row[valueKey]);
+      if (!segment || value === null) continue;
+
+      segments.push({
+        report_period: reportPeriod,
+        segment,
+        value,
+        metric: 'revenue',
+        source_file: entry.entryName,
+      });
+    }
+  }
+
+  return { segments, sourceFiles };
+}
+
 async function resolveCompanyIdentifiers(ticker: string): Promise<CvmCompanyIdentifiers | null> {
   const normalized = normalizeTicker(ticker);
   if (companyCache.has(normalized.canonical)) {
@@ -456,6 +509,49 @@ export async function getCvmStatements(params: {
     sourceUrls: [url],
     note: hasData ? undefined : 'No statement rows found in CVM datasets for the requested period.',
   };
+}
+
+export async function getCvmSegmentedRevenues(params: {
+  ticker: string;
+  year?: number;
+  quarter?: number;
+}): Promise<{ segments: CvmSegmentEntry[]; sourceUrls: string[]; note?: string }> {
+  const identifiers = await resolveCompanyIdentifiers(params.ticker);
+  if (!identifiers) {
+    return {
+      segments: [],
+      sourceUrls: [],
+      note: 'Unable to resolve company identifiers for CVM segment extraction.',
+    };
+  }
+
+  const year = params.year ?? new Date().getFullYear();
+  const sourceUrls: string[] = [];
+  const segments: CvmSegmentEntry[] = [];
+
+  for (const docType of ['DFP', 'ITR'] as const) {
+    try {
+      const { path, url } = await downloadZip(docType, year);
+      const zip = new AdmZip(path);
+      const { segments: found, sourceFiles } = extractCvmSegmentsFromZip(zip, identifiers, {
+        year,
+        quarter: params.quarter,
+      });
+      if (sourceFiles.length > 0) {
+        sourceUrls.push(url);
+      }
+      segments.push(...found);
+    } catch {
+      continue;
+    }
+  }
+
+  const note =
+    segments.length > 0
+      ? undefined
+      : 'No segment revenue rows found in CVM DFP/ITR datasets for the requested period.';
+
+  return { segments, sourceUrls, note };
 }
 
 export async function getCvmFilingItems(params: {
