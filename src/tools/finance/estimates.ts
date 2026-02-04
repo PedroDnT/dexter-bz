@@ -5,6 +5,50 @@ import { formatToolResult } from '../types.js';
 import { isBrazilTicker, normalizeTicker, toYahooSymbol } from './market.js';
 import { yfinanceEstimates } from './providers/yfinance.js';
 
+export function normalizeYfinanceEstimates(payload: unknown): Record<string, unknown> {
+  const info = (payload && typeof payload === 'object' && 'info' in (payload as Record<string, unknown>))
+    ? ((payload as { info?: Record<string, unknown> }).info ?? {})
+    : {};
+
+  const priceTargets = {
+    mean: info.targetMeanPrice ?? null,
+    high: info.targetHighPrice ?? null,
+    low: info.targetLowPrice ?? null,
+  };
+  const recommendation = {
+    mean: info.recommendationMean ?? null,
+    key: info.recommendationKey ?? null,
+  };
+  const eps = {
+    forward: info.forwardEps ?? null,
+    trailing: info.trailingEps ?? null,
+  };
+  const analystCount = info.numberOfAnalystOpinions ?? null;
+
+  const missing: string[] = [];
+  if (priceTargets.mean === null && priceTargets.high === null && priceTargets.low === null) {
+    missing.push('price_targets');
+  }
+  if (recommendation.mean === null && recommendation.key === null) {
+    missing.push('recommendation');
+  }
+  if (eps.forward === null && eps.trailing === null) {
+    missing.push('eps');
+  }
+  if (analystCount === null) {
+    missing.push('analyst_count');
+  }
+
+  return {
+    price_targets: priceTargets,
+    recommendation,
+    eps,
+    analyst_count: analystCount,
+    source: 'yfinance/yahoo',
+    note: missing.length > 0 ? `Missing fields from yfinance: ${missing.join(', ')}` : undefined,
+  };
+}
+
 const AnalystEstimatesInputSchema = z.object({
   ticker: z
     .string()
@@ -26,7 +70,8 @@ export const getAnalystEstimates = new DynamicStructuredTool({
       const normalized = normalizeTicker(input.ticker);
       const symbol = toYahooSymbol(normalized.canonical);
       const estimates = await yfinanceEstimates(symbol);
-      return formatToolResult(estimates || [], ['https://finance.yahoo.com']);
+      const normalizedEstimates = normalizeYfinanceEstimates(estimates);
+      return formatToolResult(normalizedEstimates, ['https://finance.yahoo.com']);
     }
     const params = {
       ticker: input.ticker,

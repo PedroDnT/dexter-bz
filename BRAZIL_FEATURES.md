@@ -6,6 +6,7 @@
 - Key ratios snapshot (best-effort) with BRL + USD (PTAX)
 - Company facts via BRAPI/yfinance
 - News and analyst estimates via yfinance
+- News date filtering + normalized analyst estimates (yfinance)
 - Filings metadata via CVM (DFP, ITR, FRE, IPE)
 - PTAX FX conversion metadata on Brazil outputs
 
