@@ -66,21 +66,16 @@ Instructions`;
   });
 
   it('throws when description is not a string', () => {
-    const content = `---
-name: test
-description: true
----
-Instructions`;
     // YAML might parse "true" as boolean, but gray-matter preserves strings
     // when quoted. Unquoted "true" may be parsed as boolean.
     // Let's test with an explicit non-string
-    const content2 = `---
+    const content = `---
 name: test
 description:
   nested: object
 ---
 Instructions`;
-    expect(() => parseSkillFile(content2, '/path', 'builtin')).toThrow(
+    expect(() => parseSkillFile(content, '/path', 'builtin')).toThrow(
       "missing required 'description' field"
     );
   });
