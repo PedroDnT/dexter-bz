@@ -53,7 +53,7 @@ investigations/
 
 ## Testing
 
-- Tests live in `src/__tests__/` and use Jest with `ts-jest` (ESM preset).
+- Tests live in `src/__tests__/` and use Bun's built-in test runner (via `bun test` and `bun:test` imports).
 - Run with `bun test`. CI runs both `typecheck` and `test`.
 - Test files follow the pattern `*.test.ts`.
 

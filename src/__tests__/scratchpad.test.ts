@@ -1,37 +1,46 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import { Scratchpad } from '../agent/scratchpad.js';
-import { existsSync, rmSync, readFileSync } from 'fs';
+import { existsSync, rmSync, readFileSync, readdirSync } from 'fs';
+import { join } from 'path';
 
 const TEST_SCRATCHPAD_DIR = '.dexter/scratchpad';
 
 describe('Scratchpad', () => {
   let scratchpad: Scratchpad;
   let filepath: string;
+  let createdFiles: string[] = [];
 
   beforeEach(() => {
     scratchpad = new Scratchpad('test query about Apple stock');
     // Find the created file
-    const entries = readFileSync(getLatestFile(), 'utf-8');
     filepath = getLatestFile();
+    createdFiles.push(filepath);
   });
 
   function getLatestFile(): string {
     // Scratchpad writes immediately, so we can find the file
-    const fs = require('fs');
-    const path = require('path');
-    const files = fs.readdirSync(TEST_SCRATCHPAD_DIR) as string[];
+    const files = readdirSync(TEST_SCRATCHPAD_DIR);
     const sorted = files
-      .filter((f: string) => f.endsWith('.jsonl'))
+      .filter((f) => f.endsWith('.jsonl'))
       .sort()
       .reverse();
-    return path.join(TEST_SCRATCHPAD_DIR, sorted[0]);
+    return join(TEST_SCRATCHPAD_DIR, sorted[0]);
+  }
+
+  function trackNewScratchpad(): string {
+    const file = getLatestFile();
+    createdFiles.push(file);
+    return file;
   }
 
   afterEach(() => {
-    // Clean up test files
-    if (filepath && existsSync(filepath)) {
-      rmSync(filepath);
+    // Clean up all test files created during the test
+    for (const file of createdFiles) {
+      if (file && existsSync(file)) {
+        rmSync(file);
+      }
     }
+    createdFiles = [];
   });
 
   // -------------------------------------------------------------------------
@@ -89,6 +98,7 @@ describe('Scratchpad', () => {
 
   it('hasToolResults returns false initially, true after adding', () => {
     const fresh = new Scratchpad('fresh query');
+    trackNewScratchpad();
     expect(fresh.hasToolResults()).toBe(false);
     fresh.addToolResult('test', {}, '{}', 'summary');
     expect(fresh.hasToolResults()).toBe(true);
@@ -220,6 +230,7 @@ describe('Scratchpad', () => {
 
   it('accepts custom limit configuration', () => {
     const customScratchpad = new Scratchpad('custom limits query', { maxCallsPerTool: 5 });
+    trackNewScratchpad();
     customScratchpad.recordToolCall('get_prices');
     customScratchpad.recordToolCall('get_prices');
     customScratchpad.recordToolCall('get_prices');
