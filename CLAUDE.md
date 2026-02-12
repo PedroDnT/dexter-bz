@@ -1,54 +1,45 @@
-# CLAUDE.md
+# Developer Guide
 
-This file provides context for AI assistants (Claude, GitHub Copilot, etc.) working on this repository.
+Technical reference for contributors and AI coding assistants.
 
-## Project Overview
+## Quick Reference
 
-Dexter is an autonomous financial research agent built with TypeScript/Bun, React (Ink), and LangChain. It uses an agentic loop: decompose queries → plan → execute tools → self-validate → iterate. Think Claude Code, but for financial research.
+**Tech Stack**: Bun + TypeScript + React (Ink) + LangChain
 
-## Tech Stack
-
-- **Runtime**: Bun (v1.0+)
-- **Language**: TypeScript (strict mode, ESNext target)
-- **UI**: React 19 + Ink (terminal UI)
-- **AI Orchestration**: LangChain with multi-provider support (OpenAI, Anthropic, Google, Ollama, xAI, OpenRouter)
-- **Schema Validation**: Zod
-- **Financial Data**: Financial Datasets API, BRAPI (Brazil), yfinance (Python helper)
-
-## Common Commands
-
+**Commands**:
 ```bash
 bun install              # Install dependencies
-bun start                # Run interactive CLI
-bun dev                  # Run in watch mode (development)
-bun run typecheck        # Type-check with tsc --noEmit
+bun start                # Interactive CLI
+bun dev                  # Watch mode
 bun test                 # Run tests
-bun test --watch         # Run tests in watch mode
-bun run investigate      # Run fraud/anomaly screening pipeline
+bun test --watch         # Test watch mode
+bun run typecheck        # Type check
+bun run investigate      # Fraud screening pipeline
 ```
+
+**Key Directories**:
+- `src/agent/` - Core agent loop and scratchpad
+- `src/tools/` - Financial and search tools
+- `src/skills/` - Workflow templates (SKILL.md format)
+- `src/evals/` - Evaluation framework
+- `src/pipelines/` - Data pipelines (fraud screening)
+- `src/__tests__/` - Test files
 
 ## Project Structure
 
 ```
 src/
   agent/        # Core agent loop, prompts, scratchpad, types
-  components/   # React/Ink terminal UI components
+  components/   # React/Ink terminal UI
   tools/        # Tool registry + implementations
-    finance/    # ~17 financial data tools (fundamentals, prices, filings, etc.)
-    search/     # Web search tools (Exa, Tavily)
-  skills/       # Specialist workflows with SKILL.md guides
-    dcf/        # DCF valuation skill
-    brazil-market/  # Brazil/B3 market skill
-  model/        # LLM provider configuration
-  hooks/        # React hooks for agent UI
-  utils/        # Utility modules (env, tokens, logging, chat history)
-  evals/        # Evaluation framework (LangSmith + LLM-as-judge)
-  pipelines/    # Data pipelines (fraud screening)
-  __tests__/    # Test files
-scripts/
-  yfinance/     # Python helper for Yahoo Finance data
-investigations/
-  targets.json  # Fraud screening targets
+    finance/    # Financial data tools
+    search/     # Web search tools
+  skills/       # SKILL.md workflow guides
+  model/        # LLM provider config
+  utils/        # Logging, env, tokens, chat history
+  evals/        # LangSmith evaluation framework
+  pipelines/    # Fraud screening pipeline
+  __tests__/    # Bun test files
 ```
 
 ## Architecture
@@ -199,15 +190,126 @@ For Brazil: `BRAPI_TOKEN`, Python with `yfinance` installed, optional `YFINANCE_
 - Mock external APIs (Financial Datasets, BRAPI, yfinance)
 - Test tool routing logic separately from API calls
 - Validate scratchpad JSONL append operations
+## Environment Setup
 
-## CI
+**Required**:
+```bash
+OPENAI_API_KEY=...
+FINANCIAL_DATASETS_API_KEY=...
+```
 
-GitHub Actions runs on push/PR to `main`:
-1. `bun install --frozen-lockfile`
-2. `bun run typecheck`
-3. `bun test`
+**Optional**:
+```bash
+# Additional LLM providers
+ANTHROPIC_API_KEY=...
+GOOGLE_API_KEY=...
+XAI_API_KEY=...
+OPENROUTER_API_KEY=...
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+
+# Web search
+EXASEARCH_API_KEY=...
+TAVILY_API_KEY=...
+
+# Brazil support
+BRAPI_TOKEN=...
+YFINANCE_PYTHON_BIN=python3
+
+# Evaluation
+LANGSMITH_API_KEY=...
+```
 
 ## Code Conventions
+
+- **Module System**: ESM only (`"type": "module"`)
+- **Path Alias**: `@/*` → `./src/*`
+- **JSX Transform**: `react-jsx` (no React import needed)
+- **Testing**: Bun test runner (`bun:test` imports)
+- **Type Safety**: TypeScript strict mode
+- **No Formatter**: No linter/formatter configured
+
+## Key Concepts
+
+### Agent Loop
+Max 10 iterations per query. Scratchpad logs all work to `.dexter/scratchpad/*.jsonl`. Tool limit: 3 calls per tool per query.
+
+### Tool System
+Registry-based with conditional loading. Each tool has rich descriptions in `src/tools/descriptions/` with "when to use" guidance.
+
+### Skills System
+SKILL.md files (YAML frontmatter + Markdown) provide reusable workflow templates. Discovery: builtin → `~/.dexter/skills` → `.dexter/skills`.
+
+### Model Selection
+Provider auto-detected by model name prefix:
+- `claude-*` → Anthropic
+- `gemini-*` → Google
+- `grok-*` → xAI
+- `openrouter:*` → OpenRouter
+- `ollama:*` → Ollama
+- Default → OpenAI
+
+### Brazil Support
+BRAPI + yfinance for B3 data. Dual currency output (BRL + USD). Latest PTAX rate for conversion. See [BRAZIL_FEATURES.md](BRAZIL_FEATURES.md).
+
+### Fraud Pipeline
+Automated anomaly detection over public data. Configurable via `investigations/targets.json`. Outputs HTML reports to `.dexter/reports/`.
+
+## Testing
+
+- Tests use Bun's built-in runner (`bun test`)
+- Test files: `src/__tests__/*.test.ts`
+- Import from `bun:test`, not Jest
+- CI runs: `typecheck` → `test`
+
+## Development Workflow
+
+1. Run tests before changes: `bun test`
+2. Make minimal changes
+3. Run type check: `bun run typecheck`
+4. Test your changes: `bun test`
+5. Manual verification: `bun start` or `bun dev`
+
+## Common Patterns
+
+### Tool Development
+1. Create in `src/tools/finance/` or `src/tools/search/`
+2. Add description in `src/tools/descriptions/`
+3. Register in `getToolRegistry()`
+4. Mock external APIs in tests
+
+### Skill Development
+1. Create `src/skills/<name>/SKILL.md`
+2. YAML frontmatter: `name`, `description`
+3. Markdown: step-by-step instructions
+4. Include concrete examples
+
+### Testing Pattern
+```typescript
+import { describe, test, expect } from 'bun:test';
+
+describe('feature', () => {
+  test('behavior', () => {
+    expect(result).toBe(expected);
+  });
+});
+```
+
+## Debugging
+
+All agent activity logged to `.dexter/scratchpad/<timestamp>_<hash>.jsonl`:
+- `init`: Original query
+- `tool_result`: Tool call + args + result + LLM summary
+- `thinking`: Agent reasoning
+
+## Extension Points
+
+- **New tools**: Add to `src/tools/finance/` or `src/tools/search/`
+- **New skills**: Drop SKILL.md in `.dexter/skills/<name>/`
+- **New anomaly checks**: Edit `src/pipelines/fraud/anomalies.ts`
+- **New model providers**: Add to `MODEL_PROVIDERS` in `src/model/llm.ts`
+- **New eval questions**: Append to `src/evals/dataset/finance_agent.csv`
+
+## Critical Files
 
 ### General
 - ESNext modules (`"type": "module"` in package.json)
@@ -272,9 +374,19 @@ GitHub Actions runs on push/PR to `main`:
 - **New model providers**: Add factory in `MODEL_PROVIDERS` map (`src/model/llm.ts`)
 
 ## Environment Variables
+- `src/index.tsx` - CLI entry point
+- `src/agent/agent.ts` - Core agent loop
+- `src/agent/scratchpad.ts` - Work tracking
+- `src/tools/registry.ts` - Tool registration
+- `src/skills/registry.ts` - Skill discovery
+- `src/pipelines/run-all.ts` - Investigation orchestrator
 
-Required API keys are configured in `.env` (see `env.example`):
-- `OPENAI_API_KEY` and `FINANCIAL_DATASETS_API_KEY` are required at minimum
-- Brazil features need `BRAPI_TOKEN` and Python with `yfinance` installed
-- Web search needs `EXASEARCH_API_KEY` or `TAVILY_API_KEY`
-- Never commit `.env` or secrets
+## Common Pitfalls
+
+1. Don't call meta-tools repeatedly - they handle complexity internally
+2. Tool limits are enforced (3 calls/tool/query)
+3. Check scratchpad logs before debugging
+4. Skills are instructions, not functions
+5. PTAX rates are current, not historical
+6. Investigation thresholds are hard-coded in `anomalies.ts`
+7. Tests use Bun, not Jest (check imports)
