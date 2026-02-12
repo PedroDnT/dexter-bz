@@ -171,7 +171,7 @@ For Brazil: `BRAPI_TOKEN`, Python with `yfinance` installed, optional `YFINANCE_
 - Keep prompts token-efficient: summaries during loop, full data for final answer
 
 ### Testing Patterns
-- Use Jest (`jest.config.js`, `src/__tests__/`)
+- Use bun:test (`jest.config.js` is for compatibility, tests are in `src/__tests__/`)
 - Mock external APIs (Financial Datasets, BRAPI, yfinance)
 - Test tool routing logic separately from API calls
 - Validate scratchpad JSONL append operations
