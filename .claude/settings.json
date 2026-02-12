@@ -9,7 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$CLAUDE_FILE_PATH\" | grep -qE '\\.(ts|tsx)$'; then set -o pipefail; bun run typecheck 2>&1 | head -20; fi"
+            "command": "if echo \"$CLAUDE_FILE_PATH\" | grep -qE '\\.(ts|tsx)$'; then bash -c 'set -o pipefail; bun run typecheck 2>&1 | head -20'; fi"
           }
         ]
       }
