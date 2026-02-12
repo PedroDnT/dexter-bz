@@ -1,8 +1,46 @@
-# Dexter - AI Financial Research Agent
+# Developer Guide
 
-## Project Overview
+Technical reference for contributors and AI coding assistants.
 
-Dexter is an autonomous financial research agent built with TypeScript/Bun, React (Ink), and LangChain. It uses an agentic loop: decompose queries → plan → execute tools → self-validate → iterate. Think Claude Code, but for financial research.
+## Quick Reference
+
+**Tech Stack**: Bun + TypeScript + React (Ink) + LangChain
+
+**Commands**:
+```bash
+bun install              # Install dependencies
+bun start                # Interactive CLI
+bun dev                  # Watch mode
+bun test                 # Run tests
+bun test --watch         # Test watch mode
+bun run typecheck        # Type check
+bun run investigate      # Fraud screening pipeline
+```
+
+**Key Directories**:
+- `src/agent/` - Core agent loop and scratchpad
+- `src/tools/` - Financial and search tools
+- `src/skills/` - Workflow templates (SKILL.md format)
+- `src/evals/` - Evaluation framework
+- `src/pipelines/` - Data pipelines (fraud screening)
+- `src/__tests__/` - Test files
+
+## Project Structure
+
+```
+src/
+  agent/        # Core agent loop, prompts, scratchpad, types
+  components/   # React/Ink terminal UI
+  tools/        # Tool registry + implementations
+    finance/    # Financial data tools
+    search/     # Web search tools
+  skills/       # SKILL.md workflow guides
+  model/        # LLM provider config
+  utils/        # Logging, env, tokens, chat history
+  evals/        # LangSmith evaluation framework
+  pipelines/    # Fraud screening pipeline
+  __tests__/    # Bun test files
+```
 
 ## Architecture
 
@@ -49,20 +87,20 @@ bun run investigate --no-setup           # Skip setup phase
    - Positive earnings + negative CFO → High flag
 
 2. **Accrual Ratio** `(NI - CFO) / Total Assets`:
-   - \> 0.1 → Medium flag
-   - \> 0.2 → High flag
+   - > 0.1 → Medium flag
+   - > 0.2 → High flag
 
 3. **Receivables vs Revenue Growth**:
    - Receivables growth exceeds revenue by > 0.25 → Medium flag
    - Receivables growth exceeds revenue by > 0.5 → High flag
 
 4. **Balance Sheet Identity** `|Assets - (Liabilities + Equity)| / Assets`:
-   - \> 2% → Low flag
-   - \> 5% → Medium flag
+   - > 2% → Low flag
+   - > 5% → Medium flag
 
 5. **Revenue Swing** (YoY):
-   - \> 30% → Low flag
-   - \> 60% → Medium flag
+   - > 30% → Low flag
+   - > 60% → Medium flag
 
 6. **Data Coverage**:
    - Missing 1-2 inputs → Low flag
@@ -144,7 +182,141 @@ For Brazil: `BRAPI_TOKEN`, Python with `yfinance` installed, optional `YFINANCE_
 - **Purpose**: Inspect exactly what data was gathered and how the agent interpreted it
 - **Tool limits**: Max 3 calls per tool per query enforced in `Scratchpad.checkToolLimit()`
 
+## Testing
+
+- Tests live in `src/__tests__/` and use Bun's built-in test runner (via `bun test` and `bun:test` imports)
+- Run with `bun test`. CI runs both `typecheck` and `test`
+- Test files follow the pattern `*.test.ts`
+- Mock external APIs (Financial Datasets, BRAPI, yfinance)
+- Test tool routing logic separately from API calls
+- Validate scratchpad JSONL append operations
+## Environment Setup
+
+**Required**:
+```bash
+OPENAI_API_KEY=...
+FINANCIAL_DATASETS_API_KEY=...
+```
+
+**Optional**:
+```bash
+# Additional LLM providers
+ANTHROPIC_API_KEY=...
+GOOGLE_API_KEY=...
+XAI_API_KEY=...
+OPENROUTER_API_KEY=...
+OLLAMA_BASE_URL=http://127.0.0.1:11434
+
+# Web search
+EXASEARCH_API_KEY=...
+TAVILY_API_KEY=...
+
+# Brazil support
+BRAPI_TOKEN=...
+YFINANCE_PYTHON_BIN=python3
+
+# Evaluation
+LANGSMITH_API_KEY=...
+```
+
 ## Code Conventions
+
+- **Module System**: ESM only (`"type": "module"`)
+- **Path Alias**: `@/*` → `./src/*`
+- **JSX Transform**: `react-jsx` (no React import needed)
+- **Testing**: Bun test runner (`bun:test` imports)
+- **Type Safety**: TypeScript strict mode
+- **No Formatter**: No linter/formatter configured
+
+## Key Concepts
+
+### Agent Loop
+Max 10 iterations per query. Scratchpad logs all work to `.dexter/scratchpad/*.jsonl`. Tool limit: 3 calls per tool per query.
+
+### Tool System
+Registry-based with conditional loading. Each tool has rich descriptions in `src/tools/descriptions/` with "when to use" guidance.
+
+### Skills System
+SKILL.md files (YAML frontmatter + Markdown) provide reusable workflow templates. Discovery: builtin → `~/.dexter/skills` → `.dexter/skills`.
+
+### Model Selection
+Provider auto-detected by model name prefix:
+- `claude-*` → Anthropic
+- `gemini-*` → Google
+- `grok-*` → xAI
+- `openrouter:*` → OpenRouter
+- `ollama:*` → Ollama
+- Default → OpenAI
+
+### Brazil Support
+BRAPI + yfinance for B3 data. Dual currency output (BRL + USD). Latest PTAX rate for conversion. See [BRAZIL_FEATURES.md](BRAZIL_FEATURES.md).
+
+### Fraud Pipeline
+Automated anomaly detection over public data. Configurable via `investigations/targets.json`. Outputs HTML reports to `.dexter/reports/`.
+
+## Testing
+
+- Tests use Bun's built-in runner (`bun test`)
+- Test files: `src/__tests__/*.test.ts`
+- Import from `bun:test`, not Jest
+- CI runs: `typecheck` → `test`
+
+## Development Workflow
+
+1. Run tests before changes: `bun test`
+2. Make minimal changes
+3. Run type check: `bun run typecheck`
+4. Test your changes: `bun test`
+5. Manual verification: `bun start` or `bun dev`
+
+## Common Patterns
+
+### Tool Development
+1. Create in `src/tools/finance/` or `src/tools/search/`
+2. Add description in `src/tools/descriptions/`
+3. Register in `getToolRegistry()`
+4. Mock external APIs in tests
+
+### Skill Development
+1. Create `src/skills/<name>/SKILL.md`
+2. YAML frontmatter: `name`, `description`
+3. Markdown: step-by-step instructions
+4. Include concrete examples
+
+### Testing Pattern
+```typescript
+import { describe, test, expect } from 'bun:test';
+
+describe('feature', () => {
+  test('behavior', () => {
+    expect(result).toBe(expected);
+  });
+});
+```
+
+## Debugging
+
+All agent activity logged to `.dexter/scratchpad/<timestamp>_<hash>.jsonl`:
+- `init`: Original query
+- `tool_result`: Tool call + args + result + LLM summary
+- `thinking`: Agent reasoning
+
+## Extension Points
+
+- **New tools**: Add to `src/tools/finance/` or `src/tools/search/`
+- **New skills**: Drop SKILL.md in `.dexter/skills/<name>/`
+- **New anomaly checks**: Edit `src/pipelines/fraud/anomalies.ts`
+- **New model providers**: Add to `MODEL_PROVIDERS` in `src/model/llm.ts`
+- **New eval questions**: Append to `src/evals/dataset/finance_agent.csv`
+
+## Critical Files
+
+### General
+- ESNext modules (`"type": "module"` in package.json)
+- Path alias: `@/*` maps to `./src/*`
+- JSX uses `react-jsx` transform (no React import needed)
+- No linter or formatter is configured; rely on TypeScript strict mode for type safety
+- Keep PRs small and focused
 
 ### Tool Development
 1. Create tool in `src/tools/finance/` or `src/tools/search/`
@@ -169,12 +341,6 @@ For Brazil: `BRAPI_TOKEN`, Python with `yfinance` installed, optional `YFINANCE_
 - Inject tool descriptions via `buildToolDescriptions(model)`
 - Inject skill metadata via `buildSkillMetadataSection()`
 - Keep prompts token-efficient: summaries during loop, full data for final answer
-
-### Testing Patterns
-- Use bun:test (`jest.config.js` is for compatibility, tests are in `src/__tests__/`)
-- Mock external APIs (Financial Datasets, BRAPI, yfinance)
-- Test tool routing logic separately from API calls
-- Validate scratchpad JSONL append operations
 
 ## Critical Files
 
@@ -206,3 +372,21 @@ For Brazil: `BRAPI_TOKEN`, Python with `yfinance` installed, optional `YFINANCE_
 - **UI components**: React components in `src/components/` for Ink rendering
 - **Eval dataset**: Add questions to `src/evals/dataset/finance_agent.csv` (use quoted strings for multi-line)
 - **New model providers**: Add factory in `MODEL_PROVIDERS` map (`src/model/llm.ts`)
+
+## Environment Variables
+- `src/index.tsx` - CLI entry point
+- `src/agent/agent.ts` - Core agent loop
+- `src/agent/scratchpad.ts` - Work tracking
+- `src/tools/registry.ts` - Tool registration
+- `src/skills/registry.ts` - Skill discovery
+- `src/pipelines/run-all.ts` - Investigation orchestrator
+
+## Common Pitfalls
+
+1. Don't call meta-tools repeatedly - they handle complexity internally
+2. Tool limits are enforced (3 calls/tool/query)
+3. Check scratchpad logs before debugging
+4. Skills are instructions, not functions
+5. PTAX rates are current, not historical
+6. Investigation thresholds are hard-coded in `anomalies.ts`
+7. Tests use Bun, not Jest (check imports)
