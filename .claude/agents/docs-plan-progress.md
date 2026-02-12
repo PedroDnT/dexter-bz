@@ -1,6 +1,41 @@
 ---
 name: docs-plan-progress
-description: "Use this agent when documentation, project plans, or progress tracking files need to be updated. This includes updating README files, CHANGELOG, TODO lists, project plans, roadmaps, progress reports, or any documentation that reflects the current state of the project. It should be triggered after significant code changes, feature completions, milestone achievements, or when the user explicitly asks to update docs, plans, or progress.\\n\\nExamples:\\n\\n- Example 1:\\n  Context: The user has just completed implementing a new feature.\\n  user: \"I just finished implementing the user authentication module.\"\\n  assistant: \"Great work on the authentication module! Let me update the documentation and progress tracking to reflect this completion.\"\\n  <commentary>\\n  Since a significant feature was completed, use the Task tool to launch the docs-plan-progress agent to update documentation, plans, and progress files.\\n  </commentary>\\n  assistant: \"Now let me use the docs-plan-progress agent to update the project documentation, plan, and progress.\"\\n\\n- Example 2:\\n  Context: The user wants to record what was accomplished in a session.\\n  user: \"Update the progress notes with what we did today.\"\\n  assistant: \"I'll use the docs-plan-progress agent to capture today's work and update the progress tracking.\"\\n  <commentary>\\n  The user explicitly asked to update progress, so use the Task tool to launch the docs-plan-progress agent.\\n  </commentary>\\n\\n- Example 3:\\n  Context: The user has made architectural changes and the plan needs updating.\\n  user: \"We decided to switch from REST to GraphQL. Update the plan.\"\\n  assistant: \"I'll launch the docs-plan-progress agent to update the project plan and related documentation to reflect the architectural shift to GraphQL.\"\\n  <commentary>\\n  A significant architectural decision was made, so use the Task tool to launch the docs-plan-progress agent to update the plan and any related documentation.\\n  </commentary>\\n\\n- Example 4 (proactive):\\n  Context: After a series of code changes have been made throughout a session.\\n  assistant: \"I notice we've made several significant changes in this session. Let me use the docs-plan-progress agent to update the documentation and progress tracking to keep everything current.\"\\n  <commentary>\\n  Multiple changes have accumulated, so proactively use the Task tool to launch the docs-plan-progress agent to ensure documentation stays in sync.\\n  </commentary>"
+description: |
+  Use this agent when documentation, project plans, or progress tracking files need to be updated. This includes updating README files, CHANGELOG, TODO lists, project plans, roadmaps, progress reports, or any documentation that reflects the current state of the project. It should be triggered after significant code changes, feature completions, milestone achievements, or when the user explicitly asks to update docs, plans, or progress.
+
+  Examples:
+
+  - Example 1:
+    Context: The user has just completed implementing a new feature.
+    user: "I just finished implementing the user authentication module."
+    assistant: "Great work on the authentication module! Let me update the documentation and progress tracking to reflect this completion."
+    <commentary>
+    Since a significant feature was completed, use the Task tool to launch the docs-plan-progress agent to update documentation, plans, and progress files.
+    </commentary>
+    assistant: "Now let me use the docs-plan-progress agent to update the project documentation, plan, and progress."
+
+  - Example 2:
+    Context: The user wants to record what was accomplished in a session.
+    user: "Update the progress notes with what we did today."
+    assistant: "I'll use the docs-plan-progress agent to capture today's work and update the progress tracking."
+    <commentary>
+    The user explicitly asked to update progress, so use the Task tool to launch the docs-plan-progress agent.
+    </commentary>
+
+  - Example 3:
+    Context: The user has made architectural changes and the plan needs updating.
+    user: "We decided to switch from REST to GraphQL. Update the plan."
+    assistant: "I'll launch the docs-plan-progress agent to update the project plan and related documentation to reflect the architectural shift to GraphQL."
+    <commentary>
+    A significant architectural decision was made, so use the Task tool to launch the docs-plan-progress agent to update the plan and any related documentation.
+    </commentary>
+
+  - Example 4 (proactive):
+    Context: After a series of code changes have been made throughout a session.
+    assistant: "I notice we've made several significant changes in this session. Let me use the docs-plan-progress agent to update the documentation and progress tracking to keep everything current."
+    <commentary>
+    Multiple changes have accumulated, so proactively use the Task tool to launch the docs-plan-progress agent to ensure documentation stays in sync.
+    </commentary>
 model: haiku
 memory: project
 ---
