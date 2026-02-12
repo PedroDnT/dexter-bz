@@ -257,5 +257,3 @@ export function ModelSelector({ providerId, models, currentModel, onSelect }: Mo
     </Box>
   );
 }
-
-export { PROVIDERS };

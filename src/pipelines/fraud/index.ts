@@ -5,7 +5,7 @@ import { gatherFraudDataset } from './data.js';
 import type { FraudDataOptions } from './data.js';
 import { computeFraudSignals } from './anomalies.js';
 
-export const DEFAULT_DISCLAIMER =
+const DEFAULT_DISCLAIMER =
   'This output is a heuristic anomaly screening based on market and filings metadata. It is not proof of wrongdoing or fraud. False positives are possible. Validate any red flags with primary filings (SEC/CVM), auditor reports, and independent corroboration before drawing conclusions.';
 
 export async function runFraudInvestigation(

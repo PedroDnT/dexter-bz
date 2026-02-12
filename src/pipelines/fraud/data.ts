@@ -1,13 +1,8 @@
-import {
-  getBalanceSheets,
-  getCashFlowStatements,
-  getCompanyFacts,
-  getFilings,
-  getIncomeStatements,
-  getKeyRatiosSnapshot,
-  getPriceSnapshot,
-  getPrices,
-} from '../../tools/finance/index.js';
+import { getBalanceSheets, getCashFlowStatements, getIncomeStatements } from '../../tools/finance/fundamentals.js';
+import { getCompanyFacts } from '../../tools/finance/company_facts.js';
+import { getFilings } from '../../tools/finance/filings.js';
+import { getKeyRatiosSnapshot } from '../../tools/finance/key-ratios.js';
+import { getPriceSnapshot, getPrices } from '../../tools/finance/prices.js';
 import type { ToolResult } from '../../tools/types.js';
 import type { FetchError, FraudDataset, ResolvedTarget } from './types.js';
 

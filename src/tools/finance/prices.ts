@@ -4,7 +4,7 @@ import { callApi } from './api.js';
 import { formatToolResult } from '../types.js';
 import { isBrazilTicker, normalizeTicker, toBrapiSymbol, toYahooSymbol } from './market.js';
 import { getBrapiQuote } from './providers/brapi.js';
-import { getLatestPtax, addUsdFields } from './providers/ptax.js';
+import { getLatestPtaxSafe, addUsdFields } from './providers/ptax.js';
 import { yfinanceHistory } from './providers/yfinance.js';
 
 const PriceSnapshotInputSchema = z.object({
@@ -27,7 +27,7 @@ export const getPriceSnapshot = new DynamicStructuredTool({
       const result = Array.isArray((data as { results?: unknown[] }).results)
         ? (data as { results?: unknown[] }).results?.[0] as Record<string, unknown>
         : undefined;
-      const ptax = await getLatestPtax();
+      const ptax = await getLatestPtaxSafe();
 
       const snapshot = {
         symbol,
@@ -44,11 +44,18 @@ export const getPriceSnapshot = new DynamicStructuredTool({
           : null,
       };
 
-      const withUsd = addUsdFields(snapshot as Record<string, unknown>, ['price', 'open', 'high', 'low', 'previous_close', 'market_cap'], ptax.usd_brl);
-      return formatToolResult(
-        { ...withUsd, fx: ptax },
-        [url, ptax.sourceUrl]
-      );
+      if (ptax) {
+        const withUsd = addUsdFields(snapshot as Record<string, unknown>, ['price', 'open', 'high', 'low', 'previous_close', 'market_cap'], ptax.usd_brl);
+        return formatToolResult(
+          { ...withUsd, fx: ptax },
+          [url, ptax.sourceUrl]
+        );
+      } else {
+        return formatToolResult(
+          { ...snapshot, fx: null, note: 'PTAX unavailable - BRL values only, no USD conversion' },
+          [url]
+        );
+      }
     }
 
     const params = { ticker: input.ticker };
@@ -83,18 +90,25 @@ export const getPrices = new DynamicStructuredTool({
     if (isBrazilTicker(input.ticker)) {
       const normalized = normalizeTicker(input.ticker);
       const symbol = toYahooSymbol(normalized.canonical);
-      const ptax = await getLatestPtax();
+      const ptax = await getLatestPtaxSafe();
       const data = await yfinanceHistory({
         symbol,
         start_date: input.start_date,
         end_date: input.end_date,
         interval: input.interval,
       }) as Array<Record<string, unknown>>;
-      const prices = data.map((row) => addUsdFields(row as Record<string, unknown>, ['open', 'high', 'low', 'close'], ptax.usd_brl));
-      return formatToolResult(
-        { prices, fx: ptax, currency: 'BRL' },
-        [ptax.sourceUrl, 'https://finance.yahoo.com']
-      );
+      if (ptax) {
+        const prices = data.map((row) => addUsdFields(row as Record<string, unknown>, ['open', 'high', 'low', 'close'], ptax.usd_brl));
+        return formatToolResult(
+          { prices, fx: ptax, currency: 'BRL' },
+          [ptax.sourceUrl, 'https://finance.yahoo.com']
+        );
+      } else {
+        return formatToolResult(
+          { prices: data, fx: null, currency: 'BRL', note: 'PTAX unavailable - BRL values only, no USD conversion' },
+          ['https://finance.yahoo.com']
+        );
+      }
     }
 
     const params = {

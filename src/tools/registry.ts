@@ -1,8 +1,12 @@
 import { StructuredToolInterface } from '@langchain/core/tools';
-import { createFinancialSearch, createFinancialMetrics } from './finance/index.js';
-import { exaSearch, tavilySearch } from './search/index.js';
+import { createFinancialSearch } from './finance/financial-search.js';
+import { createFinancialMetrics } from './finance/financial-metrics.js';
+import { exaSearch } from './search/exa.js';
+import { tavilySearch } from './search/tavily.js';
 import { skillTool, SKILL_TOOL_DESCRIPTION } from './skill.js';
-import { FINANCIAL_SEARCH_DESCRIPTION, FINANCIAL_METRICS_DESCRIPTION, WEB_SEARCH_DESCRIPTION } from './descriptions/index.js';
+import { FINANCIAL_SEARCH_DESCRIPTION } from './descriptions/financial-search.js';
+import { FINANCIAL_METRICS_DESCRIPTION } from './descriptions/financial-metrics.js';
+import { WEB_SEARCH_DESCRIPTION } from './descriptions/web-search.js';
 import { discoverSkills } from '../skills/index.js';
 
 /**

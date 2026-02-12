@@ -5,7 +5,7 @@ import { formatToolResult } from '../types.js';
 import { isBrazilTicker, normalizeTicker, toBrapiSymbol, toYahooSymbol } from './market.js';
 import { getBrapiQuote } from './providers/brapi.js';
 import { yfinanceInfo } from './providers/yfinance.js';
-import { getLatestPtax, addUsdFields } from './providers/ptax.js';
+import { getLatestPtaxSafe, addUsdFields } from './providers/ptax.js';
 
 const CompanyFactsInputSchema = z.object({
   ticker: z
@@ -22,9 +22,9 @@ export const getCompanyFacts = new DynamicStructuredTool({
       const normalized = normalizeTicker(input.ticker);
       const symbol = toBrapiSymbol(normalized.canonical);
       const yahooSymbol = toYahooSymbol(normalized.canonical);
-      const ptax = await getLatestPtax();
+      const ptax = await getLatestPtaxSafe();
       let result: Record<string, unknown> = {};
-      let sourceUrls: string[] = [ptax.sourceUrl];
+      let sourceUrls: string[] = ptax ? [ptax.sourceUrl] : [];
 
       try {
         const { data, url } = await getBrapiQuote([symbol], { modules: ['summaryProfile', 'price', 'summaryDetail'] });
@@ -60,8 +60,12 @@ export const getCompanyFacts = new DynamicStructuredTool({
         };
       }
 
-      const withUsd = addUsdFields(result as Record<string, unknown>, ['market_cap'], ptax.usd_brl);
-      return formatToolResult({ ...withUsd, fx: ptax }, sourceUrls);
+      if (ptax) {
+        const withUsd = addUsdFields(result as Record<string, unknown>, ['market_cap'], ptax.usd_brl);
+        return formatToolResult({ ...withUsd, fx: ptax }, sourceUrls);
+      } else {
+        return formatToolResult({ ...result, fx: null, note: 'PTAX unavailable - BRL values only, no USD conversion' }, sourceUrls);
+      }
     }
 
     const { data, url } = await callApi('/company/facts', { ticker: input.ticker });

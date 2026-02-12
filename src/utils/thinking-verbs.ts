@@ -1,4 +1,4 @@
-export const THINKING_VERBS = [
+const THINKING_VERBS = [
   'Alchemizing', 'Ambling', 'Baking', 'Boogieing',
   'Brainstorming', 'Brewing', 'Buffering', 'Buzzing',
   'Cerebrating', 'Chugging', 'Chugging along', 'Churning',

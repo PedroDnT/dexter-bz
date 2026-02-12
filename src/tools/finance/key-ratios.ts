@@ -4,7 +4,7 @@ import { callApi } from './api.js';
 import { formatToolResult } from '../types.js';
 import { isBrazilTicker, normalizeTicker, toYahooSymbol } from './market.js';
 import { yfinanceInfo } from './providers/yfinance.js';
-import { getLatestPtax, addUsdFields } from './providers/ptax.js';
+import { getLatestPtaxSafe, addUsdFields } from './providers/ptax.js';
 import { recordBrazilGap } from './brazil-features.js';
 
 const KeyRatiosSnapshotInputSchema = z.object({
@@ -25,7 +25,7 @@ export const getKeyRatiosSnapshot = new DynamicStructuredTool({
       const normalized = normalizeTicker(input.ticker);
       const symbol = toYahooSymbol(normalized.canonical);
       const info = await yfinanceInfo(symbol) as Record<string, unknown>;
-      const ptax = await getLatestPtax();
+      const ptax = await getLatestPtaxSafe();
       const price = (info.currentPrice ?? info.regularMarketPrice) as number | undefined;
       const shares = info.sharesOutstanding as number | undefined;
       const marketCap = (info.marketCap as number | undefined) ?? (price && shares ? price * shares : undefined);
@@ -43,8 +43,12 @@ export const getKeyRatiosSnapshot = new DynamicStructuredTool({
         as_of: new Date().toISOString().slice(0, 10),
       };
 
-      const withUsd = addUsdFields(snapshot as Record<string, unknown>, ['market_cap', 'enterprise_value'], ptax.usd_brl);
-      return formatToolResult({ ...withUsd, fx: ptax }, [ptax.sourceUrl]);
+      if (ptax) {
+        const withUsd = addUsdFields(snapshot as Record<string, unknown>, ['market_cap', 'enterprise_value'], ptax.usd_brl);
+        return formatToolResult({ ...withUsd, fx: ptax }, [ptax.sourceUrl]);
+      } else {
+        return formatToolResult({ ...snapshot, fx: null, note: 'PTAX unavailable - BRL values only, no USD conversion' }, []);
+      }
     }
 
     const params = { ticker: input.ticker };
@@ -104,7 +108,7 @@ export const getKeyRatios = new DynamicStructuredTool({
       const normalized = normalizeTicker(input.ticker);
       const symbol = toYahooSymbol(normalized.canonical);
       const info = await yfinanceInfo(symbol) as Record<string, unknown>;
-      const ptax = await getLatestPtax();
+      const ptax = await getLatestPtaxSafe();
       const price = (info.currentPrice ?? info.regularMarketPrice) as number | undefined;
       const shares = info.sharesOutstanding as number | undefined;
       const marketCap = (info.marketCap as number | undefined) ?? (price && shares ? price * shares : undefined);
@@ -122,8 +126,12 @@ export const getKeyRatios = new DynamicStructuredTool({
         currency: info.currency ?? 'BRL',
       };
 
-      const withUsd = addUsdFields(record as Record<string, unknown>, ['market_cap', 'enterprise_value'], ptax.usd_brl);
-      return formatToolResult([withUsd], [ptax.sourceUrl]);
+      if (ptax) {
+        const withUsd = addUsdFields(record as Record<string, unknown>, ['market_cap', 'enterprise_value'], ptax.usd_brl);
+        return formatToolResult([withUsd], [ptax.sourceUrl]);
+      } else {
+        return formatToolResult([{ ...record, fx: null, note: 'PTAX unavailable - BRL values only, no USD conversion' }], []);
+      }
     }
 
     const params: Record<string, string | number | undefined> = {

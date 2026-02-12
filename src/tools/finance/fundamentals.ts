@@ -4,7 +4,7 @@ import { callApi } from './api.js';
 import { formatToolResult } from '../types.js';
 import { isBrazilTicker, normalizeTicker, toBrapiSymbol, toYahooSymbol } from './market.js';
 import { getBrapiQuote } from './providers/brapi.js';
-import { getLatestPtax, addUsdFields } from './providers/ptax.js';
+import { getLatestPtaxSafe, addUsdFields } from './providers/ptax.js';
 import { yfinanceStatements, yfinanceInfo } from './providers/yfinance.js';
 
 type StatementRecord = Record<string, unknown>;
@@ -121,12 +121,12 @@ function withUsd(records: StatementRecord[], fields: string[], usdBrl: number): 
 async function getBrazilStatements(
   input: z.infer<typeof FinancialStatementsInputSchema>,
   statementType: 'income' | 'balance' | 'cashflow'
-): Promise<{ data: StatementRecord[]; fx: ReturnType<typeof getLatestPtax> extends Promise<infer T> ? T : never; sourceUrls: string[] }> {
+): Promise<{ data: StatementRecord[]; fx: ReturnType<typeof getLatestPtaxSafe> extends Promise<infer T> ? T : never; sourceUrls: string[] }> {
   const normalized = normalizeTicker(input.ticker);
   const symbol = toBrapiSymbol(normalized.canonical);
   const yahooSymbol = toYahooSymbol(normalized.canonical);
-  const ptax = await getLatestPtax();
-  const sourceUrls: string[] = [ptax.sourceUrl];
+  const ptax = await getLatestPtaxSafe();
+  const sourceUrls: string[] = ptax ? [ptax.sourceUrl] : [];
 
   let annual: StatementRecord[] = [];
   let quarterly: StatementRecord[] = [];
@@ -231,7 +231,7 @@ async function getBrazilStatements(
   records = filterByPeriod(records, input).slice(0, input.limit);
 
   const usdFields = Object.keys(mappings[statementType]);
-  const withUsdFields = withUsd(records, usdFields, ptax.usd_brl);
+  const withUsdFields = ptax ? withUsd(records, usdFields, ptax.usd_brl) : records;
 
   return { data: withUsdFields, fx: ptax, sourceUrls };
 }

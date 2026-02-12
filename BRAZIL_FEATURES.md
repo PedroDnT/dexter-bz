@@ -10,7 +10,7 @@ This document describes Dexter's coverage of Brazilian (B3) market data.
 - **Company Information**: Basic company facts via BRAPI/yfinance
 - **News & Estimates**: Via yfinance
 - **Filings Metadata**: CVM filings (DFP, ITR, FRE, IPE) with document links
-- **Currency Conversion**: Latest PTAX (BCB) rate metadata included in all Brazil outputs
+- **Currency Conversion**: Multi-source PTAX rate (BCB → AwesomeAPI → ExchangeRate-API fallback chain) included in all Brazil outputs with graceful degradation
 
 ## Known Limitations
 
@@ -51,3 +51,21 @@ All Brazil market outputs include:
 - PTAX metadata: `{ ptax_rate, ptax_date, ptax_source }`
 
 Note: USD conversions use the latest available PTAX rate, not historical rates from statement dates.
+
+## PTAX Rate Sources
+
+The system attempts to fetch USD/BRL exchange rates from multiple sources in order:
+
+1. **BCB (Banco Central do Brasil)** - Official source, tried first
+   - Endpoint: `https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/`
+   - Fetches last 10 days of rates, selects latest "Fechamento" rate
+
+2. **AwesomeAPI** - Brazilian financial data API, fast and reliable
+   - Endpoint: `https://economia.awesomeapi.com.br/json/last/USD-BRL`
+   - Free service, typically has <500ms latency
+
+3. **ExchangeRate-API** - International fallback
+   - Endpoint: `https://api.exchangerate-api.com/v4/latest/USD`
+   - Worldwide coverage, good uptime
+
+All sources have 10-second timeouts. If all sources fail, tools return BRL data without USD conversion and include a note in the response. Rate is cached for 6 hours to minimize API calls.

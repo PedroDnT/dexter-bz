@@ -210,7 +210,7 @@ export function transformMarkdownTables(content: string): string {
 /**
  * Transform markdown bold (**text**) to ANSI bold.
  */
-export function transformBold(content: string): string {
+function transformBold(content: string): string {
   return content.replace(/\*\*([^*]+)\*\*/g, (_, text) => chalk.bold(text));
 }
 

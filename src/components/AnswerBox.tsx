@@ -70,7 +70,7 @@ interface UserQueryProps {
   query: string;
 }
 
-export function UserQuery({ query }: UserQueryProps) {
+function UserQuery({ query }: UserQueryProps) {
   return (
     <Box marginTop={1} paddingRight={2}>
       <Text color={colors.white} backgroundColor={colors.mutedDark}>
