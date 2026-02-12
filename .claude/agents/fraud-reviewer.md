@@ -30,7 +30,7 @@ When reviewing changes in `src/pipelines/fraud/`:
 
 - `src/pipelines/fraud/anomalies.ts` - Core anomaly detection logic
 - `src/pipelines/fraud/` - Pipeline components
-- `src/__tests__/fraud.test.ts` - Fraud detection tests
+- `src/__tests__/fraud-anomalies.test.ts` - Fraud detection tests
 
 ## Review Checklist
 
