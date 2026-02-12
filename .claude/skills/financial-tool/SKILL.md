@@ -14,12 +14,12 @@ Create a new financial data tool in `src/tools/finance/` following project conve
 2. **Follow the established pattern**:
    - Export a Zod schema for input validation
    - Export the main tool function with proper error handling
-   - Use the FMP API client from `api.ts` or create a new provider in `providers/`
+   - Use the `callApi()` helper from `api.ts` to access financialdatasets.ai, or create a new provider in `providers/`
    - Include proper TypeScript types
 
 3. **Reference these files for patterns**:
-   - `src/tools/finance/key-ratios.ts` - Simple FMP tool example
-   - `src/tools/finance/api.ts` - FMP API client
+   - `src/tools/finance/key-ratios.ts` - Example tool using financialdatasets.ai API
+   - `src/tools/finance/api.ts` - API client for financialdatasets.ai
    - `src/tools/finance/brazil-features.ts` - Brazil-specific integrations
    - `src/tools/types.ts` - Common types
 
