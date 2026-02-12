@@ -31,7 +31,8 @@ Create a new financial data tool in `src/tools/finance/` following project conve
 
 ```typescript
 import { z } from 'zod';
-import { fmpRequest } from './api.js';
+import { callApi } from './api.js';
+import { formatToolResult } from '../types.js';
 
 export const <toolName>Schema = z.object({
   ticker: z.string().describe('Stock ticker symbol'),
@@ -40,13 +41,11 @@ export const <toolName>Schema = z.object({
 
 export type <ToolName>Input = z.infer<typeof <toolName>Schema>;
 
-export async function <toolName>(input: <ToolName>Input): Promise<Result> {
+export async function <toolName>(input: <ToolName>Input): Promise<string> {
   const { ticker } = input;
 
-  const data = await fmpRequest(`/endpoint/${ticker}`);
+  const { data, url } = await callApi(`/some-endpoint`, { ticker });
 
-  return {
-    // ... processed result
-  };
+  return formatToolResult(data, [url]);
 }
 ```
