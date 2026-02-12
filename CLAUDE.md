@@ -1,392 +1,120 @@
-# Developer Guide
+# CLAUDE.md
 
-Technical reference for contributors and AI coding assistants.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Quick Reference
+## Commands
 
-**Tech Stack**: Bun + TypeScript + React (Ink) + LangChain
-
-**Commands**:
 ```bash
-bun install              # Install dependencies
-bun start                # Interactive CLI
-bun dev                  # Watch mode
-bun test                 # Run tests
-bun test --watch         # Test watch mode
-bun run typecheck        # Type check
-bun run investigate      # Fraud screening pipeline
+bun install                          # Install dependencies
+bun start                            # Interactive CLI
+bun dev                              # Watch mode (auto-reload)
+bun test                             # Run all tests
+bun test src/__tests__/scratchpad    # Run single test file (prefix match)
+bun test --watch                     # Test watch mode
+bun run typecheck                    # TypeScript type checking
+bun run investigate                  # Fraud screening pipeline (all targets)
+bun run investigate --target AAPL    # Single ticker
+bun run investigate --open           # All targets + open reports in browser
+bun run src/evals/run.ts             # Run evaluation suite
+bun run src/evals/run.ts --sample 10 # Eval on random sample
 ```
 
-**Key Directories**:
-- `src/agent/` - Core agent loop and scratchpad
-- `src/tools/` - Financial and search tools
-- `src/skills/` - Workflow templates (SKILL.md format)
-- `src/evals/` - Evaluation framework
-- `src/pipelines/` - Data pipelines (fraud screening)
-- `src/__tests__/` - Test files
-
-## Project Structure
-
-```
-src/
-  agent/        # Core agent loop, prompts, scratchpad, types
-  components/   # React/Ink terminal UI
-  tools/        # Tool registry + implementations
-    finance/    # Financial data tools
-    search/     # Web search tools
-  skills/       # SKILL.md workflow guides
-  model/        # LLM provider config
-  utils/        # Logging, env, tokens, chat history
-  evals/        # LangSmith evaluation framework
-  pipelines/    # Fraud screening pipeline
-  __tests__/    # Bun test files
-```
+CI runs `typecheck` then `test` on push/PR to main.
 
 ## Architecture
 
+**Tech Stack**: Bun + TypeScript + React (Ink) + LangChain
+
 ### Agent Loop (`src/agent/agent.ts`)
-- **Iterative execution**: Max 10 iterations per query (configurable)
-- **Scratchpad**: Single source of truth for all work (`.dexter/scratchpad/*.jsonl`)
-- **Context management**: Tool summaries during loop, full context for final answer
-- **Tool limit**: Max 3 calls per tool per query with similarity checking to prevent loops
+
+The core execution engine. `Agent.create(config)` initializes tools and prompts, then `agent.run(query)` is an async generator yielding events (`tool_start`, `tool_end`, `thinking`, `answer_start`, `done`).
+
+**Flow**: Build prompt → call LLM with tools bound → execute tool calls in parallel → record results in scratchpad with LLM summaries → repeat (up to 10 iterations) → load full context from scratchpad → generate final answer.
+
+**Context compaction strategy**: During the loop, only LLM-generated summaries of tool results are used in prompts. For the final answer, full tool results are loaded from the scratchpad. If total context exceeds 100k tokens, the LLM selects which results need full data vs summaries (`buildContextSelectionPrompt` in `prompts.ts`).
+
+**Tool limits**: Max 3 calls per tool per query. Jaccard similarity (0.7 threshold) on query args prevents retry loops. Warnings are injected into prompts when limits are approached but execution isn't blocked.
+
+### Scratchpad (`src/agent/scratchpad.ts`)
+
+Append-only JSONL log at `.dexter/scratchpad/<timestamp>_<hash>.jsonl`. Single source of truth for all agent work. Entry types: `init` (query), `tool_result` (args + raw result + LLM summary), `thinking` (reasoning). Drives both context compaction during the loop and full context retrieval for the final answer.
 
 ### Tool System (`src/tools/`)
-- **Registry pattern** (`registry.ts`): Conditionally loads tools based on env config
-- **Rich descriptions** (`descriptions/`): Each tool has "when to use", "when NOT to use", usage notes
-- **Meta-tools**: `financial_search` and `financial_metrics` are intelligent routers, not simple APIs
-- **Tool composition**: Tools call other tools internally (see `src/tools/finance/`)
+
+**Registry** (`registry.ts`): Conditionally loads tools based on environment variables. Each tool has a rich markdown description in `src/tools/descriptions/` with "when to use" / "when NOT to use" guidance.
+
+**Meta-tools** (`financial_search`, `financial_metrics`): These are intelligent routers, not simple APIs. They take a natural language query, call a fast LLM to select which underlying finance tools to invoke, execute them in parallel via `Promise.all()`, and merge results. `financial_search` routes to 15+ tools (prices, filings, news, etc.); `financial_metrics` is scoped to 6 fundamentals/ratios tools.
+
+**Finance tools** (`src/tools/finance/`): Structured tools with Zod schemas for prices, fundamentals, filings, key ratios, analyst estimates, insider trades, segmented revenues, company facts, and crypto data.
 
 ### Skills System (`src/skills/`)
-- **SKILL.md format**: YAML frontmatter (name, description) + Markdown instructions
-- **Discovery order**: builtin → `~/.dexter/skills` → `.dexter/skills` (later overrides)
-- **Composable workflows**: Skills are reusable instruction templates (e.g., `dcf/SKILL.md`, `brazil-market/SKILL.md`)
-- **Auto-injection**: Skills available via `skill` tool when present
 
-### Brazil Market Support (`BRAZIL_FEATURES.md`)
-- **Data sources**: BRAPI (B3 prices/fundamentals), yfinance (via Python bridge), CVM (filings), PTAX (FX rates)
-- **Dual currency**: Brazil outputs include both BRL and USD using latest PTAX
-- **Ticker patterns**: Recognizes `.SA` suffix and raw B3 tickers (PETR4, VALE3, ITUB4)
-- **Known gaps**: Documented in `BRAZIL_FEATURES.md` (insider trades, segmented revenue, historical ratios)
-
-### Investigation Pipeline (`src/pipelines/fraud/`)
-**Purpose**: Deterministic red-flag screening over public-market data (prices, fundamentals, filings).
-
-**Run commands**:
-```bash
-bun run investigate --open              # All targets + open reports
-bun run investigate --target AAPL        # Single ticker
-bun run investigate --targets AAPL,MSFT  # Multiple tickers
-bun run investigate --config custom.json # Custom config
-bun run investigate --no-setup           # Skip setup phase
-```
-
-**Anomaly Detection Thresholds** (`src/pipelines/fraud/anomalies.ts`):
-
-1. **Earnings Quality**:
-   - CFO to Net Income < 0.6 → Medium flag
-   - Positive earnings + negative CFO → High flag
-
-2. **Accrual Ratio** `(NI - CFO) / Total Assets`:
-   - > 0.1 → Medium flag
-   - > 0.2 → High flag
-
-3. **Receivables vs Revenue Growth**:
-   - Receivables growth exceeds revenue by > 0.25 → Medium flag
-   - Receivables growth exceeds revenue by > 0.5 → High flag
-
-4. **Balance Sheet Identity** `|Assets - (Liabilities + Equity)| / Assets`:
-   - > 2% → Low flag
-   - > 5% → Medium flag
-
-5. **Revenue Swing** (YoY):
-   - > 30% → Low flag
-   - > 60% → Medium flag
-
-6. **Data Coverage**:
-   - Missing 1-2 inputs → Low flag
-   - Missing 3+ inputs → Medium flag
-
-**Targets config**: `investigations/targets.json` (supports both ticker and company name queries)
-
-**Output structure**:
-- Per-target: `.dexter/reports/<run-id>/<target>/report.html`
-- Run index: `.dexter/reports/<run-id>/index.html`
-- Latest shortcut: `.dexter/reports/latest/` (symlink)
-
-**Computed Metrics** (stored in `FraudMetrics`):
-- `revenue`, `net_income`, `net_cash_flow_from_operations`, `free_cash_flow`
-- `revenue_yoy_growth`, `net_income_yoy_growth`, `cfo_yoy_growth`, `fcf_yoy_growth`
-- `cfo_to_net_income` (earnings quality ratio)
-- `accrual_ratio` = `(NI - CFO) / Total Assets`
-- `receivables_yoy_growth`, `receivables_minus_revenue_growth`
-- `balance_sheet_identity_diff`, `balance_sheet_identity_rel`
-- `filings_count`, `missing_inputs` (data coverage metadata)
-
-**Disclaimer**: Outputs are heuristic anomaly screening, not proof of fraud. Require verification using primary filings.
-
-## Key Workflows
-
-### Development
-```bash
-bun start                      # Interactive mode
-bun dev                        # Watch mode
-bun run investigate            # Run fraud pipeline (all targets)
-bun run investigate --open     # Run pipeline + open reports in browser
-bun run typecheck              # TypeScript checks
-bun test                       # Run test suite
-bun test --watch               # Watch mode for tests
-```
-
-### Evaluation Suite (`src/evals/`)
-```bash
-bun run src/evals/run.ts           # Run on all questions
-bun run src/evals/run.ts --sample 10  # Random sample of 10
-```
-
-- **Dataset**: `src/evals/dataset/finance_agent.csv` (question, expected_answer pairs)
-- **LLM-as-Judge**: GPT-5.2 evaluates correctness (binary score: 0 or 1)
-- **Tracking**: All runs logged to LangSmith with experiment names (`dexter-eval-<timestamp>`)
-- **UI**: Real-time Ink-based progress display with running accuracy
-- **Adding cases**: Append to CSV, parser handles multi-line quoted fields
-
-### Environment Setup
-Required keys: `OPENAI_API_KEY`, `FINANCIAL_DATASETS_API_KEY`
-
-Optional providers: `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `XAI_API_KEY`, `OPENROUTER_API_KEY`, `OLLAMA_BASE_URL`
-
-Optional features: `EXASEARCH_API_KEY` (or `TAVILY_API_KEY`), `LANGSMITH_API_KEY` (for evals)
-
-For Brazil: `BRAPI_TOKEN`, Python with `yfinance` installed, optional `YFINANCE_PYTHON_BIN`
+SKILL.md files (YAML frontmatter with `name` + `description`, then Markdown instructions) provide reusable workflow templates. Discovery order: builtin (`src/skills/`) → user (`~/.dexter/skills/`) → project (`.dexter/skills/`), with later entries overriding by name. Available skills: `dcf` (DCF valuation), `brazil-market` (B3 research patterns). The `skill` tool loads instructions at runtime; scratchpad deduplication prevents re-execution.
 
 ### Model Selection (`src/model/llm.ts`)
-**Provider detection by prefix**:
-- `claude-*` → Anthropic (e.g., `claude-haiku-4-5`, `claude-opus-4-2`)
-- `gemini-*` → Google (e.g., `gemini-3-flash-preview`)
-- `grok-*` → xAI (e.g., `grok-4-1-fast-reasoning`)
-- `openrouter:*` → OpenRouter (e.g., `openrouter:openai/gpt-4o`)
-- `ollama:*` → Ollama (e.g., `ollama:llama2`, uses `OLLAMA_BASE_URL` if set)
-- Default → OpenAI (e.g., `gpt-5.2`, `gpt-4.1`)
 
-**Fast model variants** (used for summaries, tool routing):
-- OpenAI: `gpt-4.1`
-- Anthropic: `claude-haiku-4-5`
-- Google: `gemini-3-flash-preview`
-- xAI: `grok-4-1-fast-reasoning`
-- Ollama: Falls back to specified model
+Provider auto-detected by model name prefix: `claude-*` → Anthropic, `gemini-*` → Google, `grok-*` → xAI, `openrouter:*` → OpenRouter, `ollama:*` → Ollama, default → OpenAI. Default model: `gpt-5.2`. Fast model variants (for summaries/routing): `gpt-4.1`, `claude-haiku-4-5`, `gemini-3-flash-preview`, `grok-4-1-fast-reasoning`. LLM calls have 3-attempt retry with exponential backoff.
 
-**Strategy**: Use flagship models for agent loop, fast models for tool summaries and context compression.
+### Fraud Pipeline (`src/pipelines/fraud/`)
 
-### Debugging
-- **Scratchpad logs**: `.dexter/scratchpad/<timestamp>_<hash>.jsonl`
-- **Entry types**: `init` (query), `tool_result` (args + raw result + LLM summary), `thinking` (reasoning)
-- **Purpose**: Inspect exactly what data was gathered and how the agent interpreted it
-- **Tool limits**: Max 3 calls per tool per query enforced in `Scratchpad.checkToolLimit()`
+Deterministic red-flag screening over public financial data. Orchestrated by `src/pipelines/run-all.ts`. Flow: resolve tickers → gather data → compute signals (`computeFraudSignals` in `anomalies.ts`) → render HTML reports. Outputs to `.dexter/reports/<run-id>/` with per-target reports and an index page (`.dexter/reports/latest/` symlink).
 
-## Testing
+**Anomaly thresholds** (hard-coded in `anomalies.ts`):
+- Earnings quality: CFO/NI < 0.6 → Medium; positive NI + negative CFO → High
+- Accrual ratio (NI-CFO)/Assets: > 0.1 → Medium; > 0.2 → High
+- Receivables vs revenue growth delta: > 0.25 → Medium; > 0.5 → High
+- Balance sheet identity deviation: > 2% → Low; > 5% → Medium
+- Revenue swing YoY: > 30% → Low; > 60% → Medium
+- Missing data inputs: 1-2 → Low; 3+ → Medium
 
-- Tests live in `src/__tests__/` and use Bun's built-in test runner (via `bun test` and `bun:test` imports)
-- Run with `bun test`. CI runs both `typecheck` and `test`
-- Test files follow the pattern `*.test.ts`
-- Mock external APIs (Financial Datasets, BRAPI, yfinance)
-- Test tool routing logic separately from API calls
-- Validate scratchpad JSONL append operations
-## Environment Setup
+### CLI & UI (`src/index.tsx`, `src/cli.tsx`)
 
-**Required**:
-```bash
-OPENAI_API_KEY=...
-FINANCIAL_DATASETS_API_KEY=...
-```
+React + Ink terminal UI. Components in `src/components/`. Hooks: `useModelSelection` (provider/model flow), `useAgentRunner` (agent execution + events), `useInputHistory` (arrow key navigation).
 
-**Optional**:
-```bash
-# Additional LLM providers
-ANTHROPIC_API_KEY=...
-GOOGLE_API_KEY=...
-XAI_API_KEY=...
-OPENROUTER_API_KEY=...
-OLLAMA_BASE_URL=http://127.0.0.1:11434
+## Brazil Market Support
 
-# Web search
-EXASEARCH_API_KEY=...
-TAVILY_API_KEY=...
+Data sources: BRAPI (`BRAPI_TOKEN`), yfinance (Python bridge via `YFINANCE_PYTHON_BIN`), CVM (filings), PTAX (BCB FX rates). Both `PETR4` and `PETR4.SA` ticker formats work. All outputs include `_usd` suffix fields + `{ ptax_rate, ptax_date, ptax_source }` metadata. PTAX uses **latest** rate, not historical period-end. Known gaps documented in `BRAZIL_FEATURES.md`; track new gaps with `recordBrazilGap()`.
 
-# Brazil support
-BRAPI_TOKEN=...
-YFINANCE_PYTHON_BIN=python3
+## Environment
 
-# Evaluation
-LANGSMITH_API_KEY=...
-```
+**Required**: `OPENAI_API_KEY`, `FINANCIAL_DATASETS_API_KEY`
+
+**Optional**: `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`, `XAI_API_KEY`, `OPENROUTER_API_KEY`, `OLLAMA_BASE_URL`, `EXASEARCH_API_KEY` (or `TAVILY_API_KEY`), `LANGSMITH_API_KEY`, `BRAPI_TOKEN`, `YFINANCE_PYTHON_BIN`
 
 ## Code Conventions
 
-- **Module System**: ESM only (`"type": "module"`)
-- **Path Alias**: `@/*` → `./src/*`
-- **JSX Transform**: `react-jsx` (no React import needed)
-- **Testing**: Bun test runner (`bun:test` imports)
-- **Type Safety**: TypeScript strict mode
-- **No Formatter**: No linter/formatter configured
+- ESM only (`"type": "module"`), path alias `@/*` → `./src/*`
+- JSX transform: `react-jsx` (no React import needed)
+- TypeScript strict mode, no linter/formatter configured
+- Tests use Bun's runner (`import { describe, it, expect } from 'bun:test'`), NOT Jest
+- Mock external APIs in tests; test routing logic separately from API calls
 
-## Key Concepts
+## Common Pitfalls
 
-### Agent Loop
-Max 10 iterations per query. Scratchpad logs all work to `.dexter/scratchpad/*.jsonl`. Tool limit: 3 calls per tool per query.
-
-### Tool System
-Registry-based with conditional loading. Each tool has rich descriptions in `src/tools/descriptions/` with "when to use" guidance.
-
-### Skills System
-SKILL.md files (YAML frontmatter + Markdown) provide reusable workflow templates. Discovery: builtin → `~/.dexter/skills` → `.dexter/skills`.
-
-### Model Selection
-Provider auto-detected by model name prefix:
-- `claude-*` → Anthropic
-- `gemini-*` → Google
-- `grok-*` → xAI
-- `openrouter:*` → OpenRouter
-- `ollama:*` → Ollama
-- Default → OpenAI
-
-### Brazil Support
-BRAPI + yfinance for B3 data. Dual currency output (BRL + USD). Latest PTAX rate for conversion. See [BRAZIL_FEATURES.md](BRAZIL_FEATURES.md).
-
-### Fraud Pipeline
-Automated anomaly detection over public data. Configurable via `investigations/targets.json`. Outputs HTML reports to `.dexter/reports/`.
-
-## Testing
-
-- Tests use Bun's built-in runner (`bun test`)
-- Test files: `src/__tests__/*.test.ts`
-- Import from `bun:test`, not Jest
-- CI runs: `typecheck` → `test`
-
-## Development Workflow
-
-1. Run tests before changes: `bun test`
-2. Make minimal changes
-3. Run type check: `bun run typecheck`
-4. Test your changes: `bun test`
-5. Manual verification: `bun start` or `bun dev`
-
-## Common Patterns
-
-### Tool Development
-1. Create in `src/tools/finance/` or `src/tools/search/`
-2. Add description in `src/tools/descriptions/`
-3. Register in `getToolRegistry()`
-4. Mock external APIs in tests
-
-### Skill Development
-1. Create `src/skills/<name>/SKILL.md`
-2. YAML frontmatter: `name`, `description`
-3. Markdown: step-by-step instructions
-4. Include concrete examples
-
-### Testing Pattern
-```typescript
-import { describe, test, expect } from 'bun:test';
-
-describe('feature', () => {
-  test('behavior', () => {
-    expect(result).toBe(expected);
-  });
-});
-```
-
-## Debugging
-
-All agent activity logged to `.dexter/scratchpad/<timestamp>_<hash>.jsonl`:
-- `init`: Original query
-- `tool_result`: Tool call + args + result + LLM summary
-- `thinking`: Agent reasoning
+1. **Meta-tools are one-shot**: `financial_search` handles complexity internally — pass the full query once, don't call repeatedly
+2. **Tool limits enforced**: 3 calls per tool per query, with similarity detection on args
+3. **Skills are instructions, not functions**: They return markdown guidance for the agent, not computed results
+4. **PTAX is current, not historical**: USD conversions use latest rate, not statement-period rates
+5. **Thresholds are hard-coded**: Edit `anomalies.ts` directly to change fraud detection thresholds
+6. **Tests are Bun, not Jest**: Use `bun:test` imports; `@types/jest` is a devDep for legacy reasons only
 
 ## Extension Points
 
-- **New tools**: Add to `src/tools/finance/` or `src/tools/search/`
-- **New skills**: Drop SKILL.md in `.dexter/skills/<name>/`
-- **New anomaly checks**: Edit `src/pipelines/fraud/anomalies.ts`
-- **New model providers**: Add to `MODEL_PROVIDERS` in `src/model/llm.ts`
+- **New tools**: Create in `src/tools/finance/` or `src/tools/search/`, add description in `src/tools/descriptions/`, register in `getToolRegistry()`
+- **New skills**: Add `SKILL.md` in `src/skills/<name>/` (builtin) or `.dexter/skills/<name>/` (project override)
+- **New anomaly checks**: Edit `computeFraudSignals()` in `src/pipelines/fraud/anomalies.ts`
+- **New model providers**: Add factory to `MODEL_PROVIDERS` in `src/model/llm.ts`
 - **New eval questions**: Append to `src/evals/dataset/finance_agent.csv`
 
 ## Critical Files
 
-### General
-- ESNext modules (`"type": "module"` in package.json)
-- Path alias: `@/*` maps to `./src/*`
-- JSX uses `react-jsx` transform (no React import needed)
-- No linter or formatter is configured; rely on TypeScript strict mode for type safety
-- Keep PRs small and focused
-
-### Tool Development
-1. Create tool in `src/tools/finance/` or `src/tools/search/`
-2. Add rich description in `src/tools/descriptions/` with "when to use" + "when NOT to use"
-3. Register in `getToolRegistry()` with conditional loading based on env
-4. For meta-tools: route to underlying tools, don't duplicate logic
-
-### Skill Development
-1. Create directory in `src/skills/<skill-name>/`
-2. Add `SKILL.md` with YAML frontmatter (`name`, `description`) + step-by-step instructions
-3. Include concrete examples with tool query templates
-4. Reference supporting files (e.g., `sector-wacc.md` in dcf skill)
-
-### Brazil Data Handling
-- Always check for `_usd` suffix fields (e.g., `market_cap_usd`, `price_usd`)
-- Include PTAX metadata in outputs: `{ ptax_rate, ptax_date, ptax_source }`
-- Fall back gracefully when BRAPI/yfinance unavailable
-- Document gaps in `BRAZIL_FEATURES.md` using `recordBrazilGap()` helper
-
-### System Prompts (`src/agent/prompts.ts`)
-- Built from: `DEFAULT_SYSTEM_PROMPT` + tool descriptions + skill metadata
-- Inject tool descriptions via `buildToolDescriptions(model)`
-- Inject skill metadata via `buildSkillMetadataSection()`
-- Keep prompts token-efficient: summaries during loop, full data for final answer
-
-## Critical Files
-
-- `src/index.tsx`: CLI entry point (Ink-based UI)
-- `src/agent/agent.ts`: Core agentic loop and iteration logic
-- `src/agent/scratchpad.ts`: Persistent work tracking and tool limits
-- `src/tools/registry.ts`: Tool registration and conditional loading
-- `src/skills/registry.ts`: Skill discovery and caching
-- `src/pipelines/run-all.ts`: Investigation pipeline orchestrator
-- `src/tools/finance/brazil-features.ts`: Gap tracking for Brazil features
-
-## Common Pitfalls
-
-1. **Don't call meta-tools multiple times**: `financial_search` handles complexity internally—pass the full query once
-2. **Respect tool limits**: Agent strictly enforces max 3 calls per tool per query (no overrides)
-3. **Check scratchpad before debugging**: All tool calls are logged as JSONL, inspect before assuming issues
-4. **Brazil ticker resolution**: Both `PETR4` and `PETR4.SA` work, but outputs differ (BRAPI vs yfinance)
-5. **Skills aren't code**: They're instructions that guide the agent's tool usage—don't treat them as functions
-6. **PTAX is latest, not period-end**: USD conversions use current PTAX, not historical rates from statement dates
-7. **Model selection in config**: Default is `gpt-5.2`, but always check `AgentConfig.model` for runtime overrides
-8. **Investigation thresholds are hard-coded**: Don't assume they're configurable—edit `anomalies.ts` directly to tune
-
-## Extension Points
-
-- **New data sources**: Add provider in `src/tools/finance/providers/`, integrate in meta-tools
-- **New anomaly checks**: Add detection logic in `computeFraudSignals()` (`src/pipelines/fraud/anomalies.ts`)
-- **Custom thresholds**: Edit constants in `anomalies.ts` (e.g., change accrual threshold from 0.1 to 0.15)
-- **Custom skills**: Drop `SKILL.md` in `.dexter/skills/<name>/` (project-level override)
-- **UI components**: React components in `src/components/` for Ink rendering
-- **Eval dataset**: Add questions to `src/evals/dataset/finance_agent.csv` (use quoted strings for multi-line)
-- **New model providers**: Add factory in `MODEL_PROVIDERS` map (`src/model/llm.ts`)
-
-## Environment Variables
-- `src/index.tsx` - CLI entry point
-- `src/agent/agent.ts` - Core agent loop
-- `src/agent/scratchpad.ts` - Work tracking
-- `src/tools/registry.ts` - Tool registration
-- `src/skills/registry.ts` - Skill discovery
-- `src/pipelines/run-all.ts` - Investigation orchestrator
-
-## Common Pitfalls
-
-1. Don't call meta-tools repeatedly - they handle complexity internally
-2. Tool limits are enforced (3 calls/tool/query)
-3. Check scratchpad logs before debugging
-4. Skills are instructions, not functions
-5. PTAX rates are current, not historical
-6. Investigation thresholds are hard-coded in `anomalies.ts`
-7. Tests use Bun, not Jest (check imports)
+- `src/index.tsx` — CLI entry point (Ink UI)
+- `src/agent/agent.ts` — Core agent loop and iteration logic
+- `src/agent/scratchpad.ts` — Work tracking, tool limits, context retrieval
+- `src/agent/prompts.ts` — System prompt composition (base + tool descriptions + skills)
+- `src/tools/registry.ts` — Tool registration and conditional loading
+- `src/tools/finance/financial-search.ts` — Meta-tool routing to 15+ finance tools
+- `src/skills/registry.ts` — Skill discovery and caching
+- `src/model/llm.ts` — LLM provider factory and fast model variants
+- `src/pipelines/run-all.ts` — Investigation pipeline orchestrator
+- `src/pipelines/fraud/anomalies.ts` — Anomaly detection logic and thresholds

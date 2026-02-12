@@ -30,6 +30,7 @@ venv/
 env/
 ENV/
 .venv
+myenv/
 
 # Node.js
 node_modules/
