@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if echo \"$CLAUDE_FILE_PATH\" | grep -qE '(\\.env|bun\\.lockb)$'; then echo 'BLOCKED: Protected file - .env and lockfiles should not be edited'; exit 1; fi"
+            "command": "if echo \"$CLAUDE_FILE_PATH\" | grep -qE '(\\.env|bun\\.lockb?)$'; then echo 'BLOCKED: Protected file - .env and bun lockfiles (bun.lock/bun.lockb) should not be edited'; exit 1; fi"
           }
         ]
       }
