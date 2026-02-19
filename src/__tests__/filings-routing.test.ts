@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'bun:test';
 import { shouldUseCvmFilings } from '../tools/finance/filings.js';
 
 describe('CVM routing', () => {

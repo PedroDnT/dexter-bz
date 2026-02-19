@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'bun:test';
 import { selectLatestPtax } from '../tools/finance/providers/ptax.js';
 
 describe('PTAX selection', () => {

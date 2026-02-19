@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'bun:test';
 import { isBrazilTicker, normalizeTicker } from '../tools/finance/market.js';
 
 describe('Brazil ticker detection', () => {
