@@ -292,7 +292,7 @@ Before each deletion:
 - [ ] Run `bun test` - all tests pass
 - [ ] Run `bun run typecheck` - no type errors
 - [ ] Run `bun start` - CLI starts successfully
-- [ ] Run `bun run investigate` - fraud pipeline works
+- [ ] Run `x` - fraud pipeline works
 - [ ] Git commit after each successful deletion
 
 ---
