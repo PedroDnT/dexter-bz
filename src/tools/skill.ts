@@ -1,6 +1,6 @@
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
-import { getSkill, discoverSkills } from '../skills/index.js';
+import { getSkill, discoverSkills } from '../skills/registry.js';
 
 /**
  * Rich description for the skill tool.

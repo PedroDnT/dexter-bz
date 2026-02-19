@@ -7,7 +7,7 @@ import { skillTool, SKILL_TOOL_DESCRIPTION } from './skill.js';
 import { FINANCIAL_SEARCH_DESCRIPTION } from './descriptions/financial-search.js';
 import { FINANCIAL_METRICS_DESCRIPTION } from './descriptions/financial-metrics.js';
 import { WEB_SEARCH_DESCRIPTION } from './descriptions/web-search.js';
-import { discoverSkills } from '../skills/index.js';
+import { discoverSkills } from '../skills/registry.js';
 
 /**
  * A registered tool with its rich description for system prompt injection.

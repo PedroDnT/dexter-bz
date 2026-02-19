@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef } from 'react';
 import { Agent } from '../agent/agent.js';
 import { InMemoryChatHistory } from '../utils/in-memory-chat-history.js';
-import type { HistoryItem, WorkingState } from '../components/index.js';
+import type { HistoryItem } from '../components/HistoryItemView.js';
+import type { WorkingState } from '../components/WorkingIndicator.js';
 import type { AgentConfig, AgentEvent, DoneEvent } from '../agent/index.js';
 
 // ============================================================================

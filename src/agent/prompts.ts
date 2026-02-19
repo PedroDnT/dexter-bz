@@ -1,5 +1,5 @@
 import { buildToolDescriptions } from '../tools/registry.js';
-import { buildSkillMetadataSection, discoverSkills } from '../skills/index.js';
+import { buildSkillMetadataSection, discoverSkills } from '../skills/registry.js';
 
 // ============================================================================
 // Helper Functions

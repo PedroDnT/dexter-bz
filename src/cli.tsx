@@ -12,7 +12,8 @@ import { Intro } from './components/Intro.js';
 import { ProviderSelector, ModelSelector, ModelInputField } from './components/ModelSelector.js';
 import { ApiKeyConfirm, ApiKeyInput } from './components/ApiKeyPrompt.js';
 import { DebugPanel } from './components/DebugPanel.js';
-import { HistoryItemView, WorkingIndicator } from './components/index.js';
+import { HistoryItemView } from './components/HistoryItemView.js';
+import { WorkingIndicator } from './components/WorkingIndicator.js';
 import { getApiKeyNameForProvider, getProviderDisplayName } from './utils/env.js';
 
 import { useModelSelection } from './hooks/useModelSelection.js';
