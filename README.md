@@ -14,6 +14,7 @@ An autonomous financial research agent that thinks, plans, and learns. Dexter pe
 - 🌎 **Brazil Support** - First-class support for B3 market data and CVM filings
 - 🕵️ **Fraud Detection** - Built-in pipeline for anomaly screening and red-flag detection
 - ��️ **Safety Features** - Loop detection and step limits prevent runaway execution
+- 📈 **Portfolio Analytics** - Analyze portfolio performance vs benchmarks with dollarized returns, Sharpe ratio, and drawdowns
 
 [![Twitter Follow](https://img.shields.io/twitter/follow/virattt?style=social)](https://twitter.com/virattt)
 
@@ -105,6 +106,23 @@ Development mode with auto-reload:
 ```bash
 bun dev
 ```
+
+### 📈 Portfolio Performance Analyzer
+
+Ask Dexter to evaluate how a portfolio has performed versus benchmarks over time.
+
+Dexter can:
+- Aggregate holdings into a portfolio based on tickers and weights
+- Fetch historical prices and build a unified return series
+- Compare performance versus benchmarks like S&P 500 (SPY) or Ibovespa (BOVA11)
+- Compute common metrics: total and annualized return, volatility, Sharpe ratio, and max drawdown
+- Produce a dollarized view for Brazilian assets when PTAX data is available
+
+Example prompts (from the interactive CLI):
+- "Analyze this portfolio vs S&P 500 from 2020 to today: AAPL 60%, MSFT 40%"
+- "How has my Brazil portfolio (PETR4 40%, VALE3 30%, BOVA11 30%) done vs Ibovespa?"
+
+Under the hood, Dexter uses dedicated portfolio tools and skills (see src/skills/portfolio-performance/SKILL.md) to structure the analysis and interpret the metrics.
 
 ## Features
 
