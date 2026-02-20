@@ -16,9 +16,9 @@ export type PortfolioHolding = z.infer<typeof PortfolioHoldingSchema>;
 // Named benchmark identifiers exposed to the LLM;
 // these are resolved to concrete tickers or synthetic series internally.
 export const BenchmarkIdSchema = z
-  .enum(['ibov', 'cdi', 'sp500'])
+  .enum(['ibov', 'sp500'])
   .describe(
-    "Named benchmark identifier. 'ibov' for Ibovespa (BOVA11 proxy), 'cdi' for local cash, 'sp500' for S&P 500."
+    "Named benchmark identifier. 'ibov' for Ibovespa (BOVA11 proxy), 'sp500' for S&P 500."
   );
 
 export type BenchmarkId = z.infer<typeof BenchmarkIdSchema>;

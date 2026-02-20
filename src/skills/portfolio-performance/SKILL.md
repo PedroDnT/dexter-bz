@@ -214,5 +214,8 @@ Period: [start_date] → [end_date] ([N] trading days)
 - Returns are **price returns** (excludes dividends) unless adjusted-close prices were used.
 - Sharpe ratio assumes a normal distribution of daily returns.
 - Beta and correlations require sufficient history (≥ 60 trading days) to be meaningful.
-- Brazil positions: **current values** use the latest PTAX rate. **Cost basis** conversion uses the current PTAX rate as a fallback when the original purchase FX rate is unavailable — this understates USD gains when BRL has depreciated and overstates them when BRL has appreciated. For precise historical P&L, provide the purchase-date exchange rate.
+- Brazil positions:
+  - **Current values** use the latest PTAX rate.
+  - **Cost basis** conversion uses the original purchase-date FX rate when available; when that rate is unavailable, the current PTAX rate is used as a fallback.
+  - This fallback tends to **overstate USD losses / understate USD gains** when BRL has depreciated and **overstate USD gains / understate USD losses** when BRL has appreciated. For precise historical P&L, provide the purchase-date exchange rate.
 - Past performance does not guarantee future results.

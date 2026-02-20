@@ -257,3 +257,48 @@ export function buildStaticPortfolioReturns(
     benchmark_returns,
   };
 }
+
+export function computePortfolioPerformanceFromSeries(
+  input: StaticPortfolioInput,
+  priceSeriesByTicker: Record<string, Series>,
+  benchmarkSeries: Record<string, Series>
+): PortfolioPerformanceResult {
+  const returns = buildStaticPortfolioReturns(input, priceSeriesByTicker, benchmarkSeries);
+  const portfolioSeries: Series = { dates: returns.dates, values: returns.portfolio_returns };
+  const portfolioSummary = summarizeSeries(
+    portfolioSeries,
+    input.return_frequency,
+    input.risk_free
+  );
+
+  const benchmarks: BenchmarkSummaryMetrics[] = [];
+  for (const id of Object.keys(benchmarkSeries)) {
+    const benchValues = returns.benchmark_returns[id] || [];
+    const benchSeries: Series = { dates: returns.dates.slice(0, benchValues.length), values: benchValues };
+    const benchSummary = summarizeSeries(benchSeries, input.return_frequency, input.risk_free);
+
+    const relative_return =
+      portfolioSummary.annualized_return !== null && benchSummary.annualized_return !== null
+        ? portfolioSummary.annualized_return - benchSummary.annualized_return
+        : null;
+
+    const tracking_error = computeTrackingError(
+      portfolioSeries,
+      benchSeries,
+      input.return_frequency
+    );
+
+    benchmarks.push({
+      id,
+      annualized_return: benchSummary.annualized_return,
+      annualized_volatility: benchSummary.annualized_volatility,
+      sharpe_ratio: benchSummary.sharpe_ratio,
+      max_drawdown: benchSummary.max_drawdown,
+      relative_return,
+      tracking_error,
+    });
+  }
+
+  return { portfolio: portfolioSummary, benchmarks };
+}
+
