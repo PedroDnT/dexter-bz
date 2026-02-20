@@ -2,6 +2,8 @@ import { StructuredToolInterface } from '@langchain/core/tools';
 import { createFinancialSearch } from './finance/financial-search.js';
 import { createFinancialMetrics } from './finance/financial-metrics.js';
 import { createBrazilMarketAgent } from './subagents/brazil/market_agent.js';
+import { createFinancialEducatorAgent } from './subagents/educator/educator_agent.js';
+import { createPortfolioAdvisorAgent } from './subagents/advisor/portfolio_agent.js';
 import { exaSearch } from './search/exa.js';
 import { tavilySearch } from './search/tavily.js';
 import { skillTool, SKILL_TOOL_DESCRIPTION } from './skill.js';
@@ -45,6 +47,16 @@ export function getToolRegistry(model: string): RegisteredTool[] {
       name: 'ask_brazil_market_expert',
       tool: createBrazilMarketAgent(model),
       description: 'Consult a specialized sub-agent for complex queries about Brazilian markets (B3), companies, and filings.',
+    },
+    {
+      name: 'ask_financial_educator',
+      tool: createFinancialEducatorAgent(model),
+      description: 'Explain financial concepts, metrics, or mechanisms simply (e.g., "What is EBITDA?", "How do options work?").',
+    },
+    {
+      name: 'ask_portfolio_advisor',
+      tool: createPortfolioAdvisorAgent(model),
+      description: 'Analyze user portfolios, discuss allocation strategy, and suggest diversification (educational only).',
     },
   ];
 
