@@ -3,6 +3,7 @@ import { createFinancialSearch } from './finance/financial-search.js';
 import { createFinancialMetrics } from './finance/financial-metrics.js';
 import { portfolioPerformance } from './finance/portfolio-performance.js';
 import { getMacroSeries } from './finance/macro-series.js';
+import { getBrazilBonds } from './finance/brazil-bonds.js';
 import { createBrazilMarketAgent } from './subagents/brazil/market_agent.js';
 import { createBrazilTaxAgent } from './subagents/brazil/tax_agent.js';
 import { createFinancialEducatorAgent } from './subagents/educator/educator_agent.js';
@@ -17,6 +18,7 @@ import { FINANCIAL_SEARCH_DESCRIPTION } from './descriptions/financial-search.js
 import { FINANCIAL_METRICS_DESCRIPTION } from './descriptions/financial-metrics.js';
 import { PORTFOLIO_PERFORMANCE_DESCRIPTION } from './descriptions/portfolio-performance.js';
 import { MACRO_SERIES_DESCRIPTION } from './descriptions/macro-series.js';
+import { BRAZIL_BONDS_DESCRIPTION } from './descriptions/brazil-bonds.js';
 import { WEB_SEARCH_DESCRIPTION } from './descriptions/web-search.js';
 import { discoverSkills } from '../skills/registry.js';
 
@@ -55,6 +57,11 @@ export function getToolRegistry(model: string): RegisteredTool[] {
       name: 'get_macro_series',
       tool: getMacroSeries,
       description: MACRO_SERIES_DESCRIPTION,
+    },
+    {
+      name: 'get_brazil_bonds',
+      tool: getBrazilBonds,
+      description: BRAZIL_BONDS_DESCRIPTION,
     },
     {
       name: 'portfolio_performance',
