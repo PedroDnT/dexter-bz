@@ -1,10 +1,12 @@
 import { describe, it, expect, mock } from 'bun:test';
 import { EventEmitter } from 'events';
 import { Readable, Writable } from 'stream';
+import * as originalChildProcess from 'child_process';
 
 const mockSpawn = mock((() => null) as unknown as (...args: unknown[]) => unknown);
 
 mock.module('child_process', () => ({
+  ...originalChildProcess,
   spawn: mockSpawn,
 }));
 

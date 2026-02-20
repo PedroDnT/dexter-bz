@@ -1,5 +1,5 @@
 ---
-name: comparable-analysis
+name: comparables
 description: Perform a Comparable Company Analysis (Comps) to value a company relative to its peers.
 ---
 

@@ -1,7 +1,6 @@
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { runSubAgent } from '../../../agent/subagent.js';
-import { getTools } from '../../registry.js';
 
 const FEE_AGENT_DESCRIPTION = `Use this tool to calculate the impact of operational costs and fees on investment returns.
 This agent is an expert in:
@@ -21,6 +20,7 @@ export function createFeeCalculatorAgent(model: string) {
       query: z.string().describe('The scenario or product to analyze for fees/costs.'),
     }),
     func: async ({ query }) => {
+        const { getTools } = await import('../../registry.js');
         const tools = getTools(model); 
 
         return await runSubAgent(query, {
@@ -50,6 +50,10 @@ Your goal is to reveal the "hidden" costs of investing and calculate true net re
 4. **Forex/BDRs/Global Accounts**:
    - **Spread**: The difference between Commercial and Tourism dollar (often 1-2%).
    - **IOF**: 1.1% (transfer to self) or 0.38% (other).
+
+5. **Private Credit (CRA/CRI/Debentures)**:
+   - **Secondary Market Spread**: The bid-ask spread when selling early can be massive (often 1-3% haircut on PU).
+   - **Liquidity Cost**: Illiquid assets force you to accept lower prices if you need cash urgently. Compare this to the tight spreads of liquid ETFs.
 
 **Analysis Approach**:
 - When comparing Fund A (2% + 20%) vs ETF B (0.5%), project the difference over 5/10 years to show the impact.

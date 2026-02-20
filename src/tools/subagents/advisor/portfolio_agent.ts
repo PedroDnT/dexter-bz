@@ -1,7 +1,6 @@
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { runSubAgent } from '../../../agent/subagent.js';
-import { getTools } from '../../registry.js';
 
 const PORTFOLIO_ADVISOR_DESCRIPTION = `Use this tool when the user asks for advice on their portfolio, asset allocation, or risk assessment.
 This agent can:
@@ -21,6 +20,7 @@ export function createPortfolioAdvisorAgent(model: string) {
       query: z.string().describe('The user\'s portfolio-related query or list of assets.'),
     }),
     func: async ({ query }) => {
+        const { getTools } = await import('../../registry.js');
         const tools = getTools(model); 
 
         return await runSubAgent(query, {
@@ -41,7 +41,10 @@ Your goal is to analyze investment portfolios and discuss asset allocation theor
 1. **Asset Allocation**: Check the mix of Equities vs Fixed Income vs International.
 2. **Sector Exposure**: Are they too heavy in Commodities (common in Brazil)? 
 3. **Currency Exposure**: How much is in BRL vs USD (e.g., IVVB11, BDRs)?
-4. **Risk**: High beta vs Low volatility.
+4. **Risk & Liquidity**: 
+   - Analyze liquidity risk carefully. Favor liquid ETFs (like BOVA11, SMAL11) over individual CRAs/CRIs unless the yield premium is significant (>1-2% over CDI/IPCA+).
+   - Warn about the "liquidity trap" in private credit (debentures/CRAs) which often cannot be sold early without severe penalty.
+   - High beta vs Low volatility assessment.
 5. **Tax Efficiency**: ALWAYS consider tax implications. Use the 'ask_brazil_tax_expert' tool to evaluate if the portfolio is tax-efficient (e.g., checking for Come-Cotas in funds, or FII tax benefits).
 
 **Brazil Context**:

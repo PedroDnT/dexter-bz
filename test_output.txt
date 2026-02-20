@@ -1,0 +1,212 @@
+bun test v1.3.9 (cf6cdbbb)
+
+src/__tests__/market.test.ts:
+(pass) Brazil ticker detection > detects B3 tickers
+(pass) Brazil ticker detection > normalizes B3 tickers
+
+src/__tests__/filings-routing.test.ts:
+(pass) CVM routing > routes Brazil ticker to CVM [0.02ms]
+(pass) CVM routing > routes Brazil filing types to CVM
+(pass) CVM routing > keeps US tickers on SEC
+
+src/__tests__/ptax-utils.test.ts:
+(pass) selectLatestPtax > prefers Fechamento over other bulletin types [0.32ms]
+(pass) selectLatestPtax > selects latest by timestamp when multiple Fechamento rates [0.30ms]
+(pass) selectLatestPtax > falls back to non-Fechamento rates when no Fechamento available
+(pass) selectLatestPtax > throws when no items have cotacaoVenda
+(pass) selectLatestPtax > throws when items array is empty
+(pass) selectLatestPtax > throws when candidates have no dataHoraCotacao
+(pass) selectLatestPtax > sets sourceUrl to empty string
+(pass) convertBrlToUsd > converts BRL to USD correctly
+(pass) convertBrlToUsd > returns original value when usdBrl is zero
+(pass) convertBrlToUsd > returns original value when value is Infinity
+(pass) convertBrlToUsd > returns original value when usdBrl is Infinity
+(pass) convertBrlToUsd > returns original value when value is NaN
+(pass) convertBrlToUsd > handles negative values correctly
+(pass) addUsdFields > adds _usd suffix fields for specified numeric fields [0.29ms]
+(pass) addUsdFields > skips non-numeric fields
+(pass) addUsdFields > skips non-finite numeric fields
+(pass) addUsdFields > preserves all original fields
+(pass) addUsdFields > handles empty fields array
+
+src/__tests__/skills-loader.test.ts:
+(pass) parseSkillFile > parses valid SKILL.md content with frontmatter [1.60ms]
+(pass) parseSkillFile > trims instructions whitespace [0.15ms]
+(pass) parseSkillFile > throws when name is missing [0.05ms]
+(pass) parseSkillFile > throws when description is missing [0.03ms]
+(pass) parseSkillFile > throws when name is not a string [0.06ms]
+(pass) parseSkillFile > throws when description is not a string [0.08ms]
+(pass) parseSkillFile > handles different source types
+(pass) parseSkillFile > handles empty instructions body
+(pass) parseSkillFile > preserves markdown formatting in instructions
+
+src/__tests__/fraud-signals.test.ts:
+(pass) computeFraudSignals – earnings_quality_cfo_negative > triggers when NI > 0 and CFO < 0
+(pass) computeFraudSignals – earnings_quality_cfo_negative > does NOT trigger when NI <= 0
+(pass) computeFraudSignals – earnings_quality_cfo_negative > does NOT trigger when CFO >= 0 [0.37ms]
+(pass) computeFraudSignals – earnings_quality_low_cfo > triggers when CFO/NI < 0.6 and both positive [0.03ms]
+(pass) computeFraudSignals – earnings_quality_low_cfo > does NOT trigger when CFO/NI >= 0.6 [0.03ms]
+(pass) computeFraudSignals – earnings_quality_low_cfo > does NOT trigger when NI is zero (avoids division by zero) [0.01ms]
+(pass) computeFraudSignals – accruals_high > triggers medium when accrual ratio > 0.1 but <= 0.2 [0.03ms]
+(pass) computeFraudSignals – accruals_high > triggers high when accrual ratio > 0.2
+(pass) computeFraudSignals – accruals_high > does NOT trigger when accrual ratio <= 0.1
+(pass) computeFraudSignals – accruals_high > does NOT trigger when total_assets is zero
+(pass) computeFraudSignals – receivables_outpacing_revenue > triggers medium when delta > 0.25 but <= 0.5 [0.10ms]
+(pass) computeFraudSignals – receivables_outpacing_revenue > triggers high when delta > 0.5
+(pass) computeFraudSignals – receivables_outpacing_revenue > does NOT trigger when delta <= 0.25
+(pass) computeFraudSignals – balance_sheet_identity_mismatch > triggers low when mismatch > 2% but <= 5%
+(pass) computeFraudSignals – balance_sheet_identity_mismatch > triggers medium when mismatch > 5%
+(pass) computeFraudSignals – balance_sheet_identity_mismatch > does NOT trigger when identity holds within 2%
+(pass) computeFraudSignals – revenue_swing > triggers low when |growth| > 30% but <= 60%
+(pass) computeFraudSignals – revenue_swing > triggers medium when |growth| > 60%
+(pass) computeFraudSignals – revenue_swing > also triggers on negative swing (revenue decline)
+(pass) computeFraudSignals – revenue_swing > does NOT trigger when |growth| <= 30%
+(pass) computeFraudSignals – filings_missing > triggers when filings array is empty
+(pass) computeFraudSignals – filings_missing > does NOT trigger when filings are present
+(pass) computeFraudSignals – filings_missing > triggers when filings is undefined
+(pass) computeFraudSignals – data_coverage_gaps > triggers low when 1-2 inputs missing
+(pass) computeFraudSignals – data_coverage_gaps > triggers medium when 3+ inputs missing
+(pass) computeFraudSignals – data_coverage_gaps > does NOT trigger when all inputs present
+(pass) computeFraudSignals – metrics > computes YoY growth metrics correctly
+(pass) computeFraudSignals – metrics > computes cfo_to_net_income ratio [0.36ms]
+(pass) computeFraudSignals – metrics > computes accrual_ratio
+(pass) computeFraudSignals – metrics > sets latest_report_period from income statements
+(pass) computeFraudSignals – metrics > tracks filings_count
+(pass) computeFraudSignals – metrics > tracks missing_inputs
+(pass) computeFraudSignals – alternative field names > picks totalRevenue as fallback for revenue
+(pass) computeFraudSignals – alternative field names > picks netIncome as fallback for net_income
+(pass) computeFraudSignals – alternative field names > picks operating_cash_flow as fallback
+(pass) computeFraudSignals – alternative field names > picks net_receivables as fallback for accounts_receivable [0.10ms]
+(pass) computeFraudSignals – alternative field names > picks total_equity_gross_minority_interest for equity
+(pass) computeFraudSignals – edge cases > returns empty flags for completely empty dataset
+(pass) computeFraudSignals – edge cases > handles string numbers in fields
+(pass) computeFraudSignals – edge cases > ignores non-finite numbers
+(pass) computeFraudSignals – edge cases > ignores NaN values
+(pass) computeFraudSignals – edge cases > handles null fields gracefully
+(pass) computeFraudSignals – edge cases > sorts statements by report_period descending
+(pass) computeFraudSignals – edge cases > growth is null when prior is zero (division by zero)
+(pass) computeFraudSignals – edge cases > growth is null with only one period
+
+src/__tests__/yfinance.test.ts:
+(pass) yfinance bridge > parses JSON output from python bridge [1.72ms]
+(pass) yfinance bridge > supports search action
+
+src/__tests__/fraud-anomalies.test.ts:
+(pass) fraud anomaly heuristics > flags negative CFO with positive earnings, high accruals, and receivables outpacing revenue [0.02ms]
+
+src/__tests__/markdown-table.test.ts:
+(pass) parseMarkdownTable > parses a standard markdown table [0.13ms]
+(pass) parseMarkdownTable > handles tables with alignment markers
+(pass) parseMarkdownTable > returns null for text with less than 2 lines
+(pass) parseMarkdownTable > returns null for text without pipes
+(pass) parseMarkdownTable > returns null for invalid separator line
+(pass) parseMarkdownTable > handles rows with varying cell counts
+(pass) parseMarkdownTable > trims cell values [0.11ms]
+(pass) renderBoxTable > renders a simple table with box drawing chars [0.12ms]
+(pass) renderBoxTable > right-aligns numeric columns [0.05ms]
+(pass) renderBoxTable > handles empty rows array
+(pass) renderBoxTable > calculates column widths from longest value
+(pass) transformMarkdownTables > transforms markdown tables into box tables [0.04ms]
+(pass) transformMarkdownTables > leaves non-table content unchanged
+(pass) transformMarkdownTables > normalizes line endings
+(pass) transformMarkdownTables > does not re-transform already-transformed tables
+
+src/__tests__/fraud-report.test.ts:
+(pass) renderFraudReportHtml > produces valid HTML document [0.36ms]
+(pass) renderFraudReportHtml > includes the target label in the title [0.02ms]
+(pass) renderFraudReportHtml > shows "NONE" badge when no flags [0.04ms]
+(pass) renderFraudReportHtml > shows "HIGH" badge when high severity flag present
+(pass) renderFraudReportHtml > shows flag details and evidence
+(pass) renderFraudReportHtml > displays "No heuristic flags triggered" when no flags
+(pass) renderFraudReportHtml > escapes HTML in user-controlled fields (XSS protection)
+(pass) renderFraudReportHtml > includes source URLs as links [0.22ms]
+(pass) renderFraudReportHtml > displays "No sources recorded" when sources array is empty [0.01ms]
+(pass) renderFraudReportHtml > displays errors when present
+(pass) renderFraudReportHtml > displays "No errors" when errors array is empty
+(pass) renderFraudReportHtml > includes metrics in the report [5.94ms]
+(pass) renderFraudReportHtml > includes disclaimer text
+(pass) renderFraudReportHtml > handles Brazil market with BRL currency [0.09ms]
+(pass) renderFraudReportHtml > displays coverage warning when missing_inputs exist
+(pass) renderFraudReportHtml > shows "All expected inputs present" when no missing inputs
+(pass) renderFraudReportHtml > sorts flags by severity (high first)
+
+src/__tests__/prompts.test.ts:
+
+# Unhandled error between tests
+-------------------------------
+SyntaxError: Export named 'execSync' not found in module 'node:child_process'.
+-------------------------------
+
+
+src/__tests__/scratchpad.test.ts:
+(pass) Scratchpad > creates a JSONL file with init entry on construction [0.79ms]
+(pass) Scratchpad > records tool results with parsed JSON [0.41ms]
+(pass) Scratchpad > stores plain text results when JSON parsing fails [0.14ms]
+(pass) Scratchpad > tracks tool summaries [0.20ms]
+(pass) Scratchpad > provides tool call records [0.13ms]
+(pass) Scratchpad > hasToolResults returns false initially, true after adding [0.29ms]
+(pass) Scratchpad > records thinking entries [0.20ms]
+(pass) Scratchpad > provides contexts with summaries and indices [0.14ms]
+(pass) Scratchpad > tracks executed skills for deduplication [0.22ms]
+(pass) Scratchpad > allows tool calls when under limit [0.13ms]
+(pass) Scratchpad > warns when approaching limit (1 call remaining) [0.20ms]
+(pass) Scratchpad > warns when over limit but still allows [0.13ms]
+(pass) Scratchpad > warns on similar query detection [0.13ms]
+(pass) Scratchpad > returns empty status when no tools called [0.12ms]
+(pass) Scratchpad > tracks tool usage across multiple tools [0.11ms]
+(pass) Scratchpad > returns null when no tools used [0.18ms]
+(pass) Scratchpad > formats tool usage summary [0.24ms]
+(pass) Scratchpad > shows over-limit status [0.29ms]
+(pass) Scratchpad > accepts custom limit configuration [0.33ms]
+
+src/__tests__/market-utils.test.ts:
+(pass) isBrazilTicker > detects standard B3 tickers (4 letters + 1 digit)
+(pass) isBrazilTicker > detects B3 tickers with 2-digit suffix
+(pass) isBrazilTicker > detects Yahoo-style .SA suffix
+(pass) isBrazilTicker > is case-insensitive
+(pass) isBrazilTicker > rejects US tickers
+(pass) isBrazilTicker > rejects tickers with too few letters
+(pass) isBrazilTicker > rejects tickers with too many letters
+(pass) isBrazilTicker > rejects tickers with no digits
+(pass) isBrazilTicker > handles whitespace
+(pass) normalizeTicker > normalizes B3 tickers to canonical form
+(pass) normalizeTicker > normalizes B3 tickers without .SA suffix
+(pass) normalizeTicker > identifies US tickers
+(pass) normalizeTicker > identifies crypto tickers
+(pass) normalizeTicker > preserves raw input
+(pass) toBrapiSymbol > strips .SA and uppercases
+(pass) toYahooSymbol > appends .SA suffix
+(pass) toYahooSymbol > uppercases the ticker
+
+src/__tests__/ptax.test.ts:
+(pass) PTAX selection > selects latest Fechamento rate
+
+src/__tests__/logger.test.ts:
+(pass) DebugLogger > adds debug log entries
+(pass) DebugLogger > adds info log entries
+(pass) DebugLogger > adds warn log entries
+(pass) DebugLogger > adds error log entries
+(pass) DebugLogger > assigns unique IDs to entries
+(pass) DebugLogger > includes timestamps
+(pass) DebugLogger > maintains circular buffer (max 50 logs) [0.24ms]
+(pass) DebugLogger > notifies multiple subscribers [0.06ms]
+(pass) DebugLogger > sends current logs immediately on subscribe
+(pass) DebugLogger > unsubscribe stops notifications
+(pass) DebugLogger > clear empties logs and notifies subscribers
+
+src/__tests__/tokens.test.ts:
+(pass) estimateTokens > estimates tokens from text length
+(pass) estimateTokens > rounds up (conservative estimate)
+(pass) estimateTokens > returns 0 for empty string
+(pass) estimateTokens > handles single character
+(pass) estimateTokens > handles long text
+(pass) estimateTokens > handles JSON-like content
+(pass) TOKEN_BUDGET > is set to 150,000
+
+1 tests failed:
+
+ 167 pass
+ 1 fail
+ 1 error
+ 315 expect() calls
+Ran 168 tests across 15 files. [146.00ms]

@@ -1,7 +1,6 @@
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { runSubAgent } from '../../../agent/subagent.js';
-import { getTools } from '../../registry.js';
 import { getPrices } from '../../finance/prices.js';
 import { getFilings } from '../../finance/filings.js';
 import { getNews } from '../../finance/news.js';
@@ -29,6 +28,7 @@ export function createBrazilMarketAgent(model: string) {
         // OR the low-level finance tools. 
         // Giving it the main registry tools (financial_search) allows it to use the router, 
         // effectively making it a high-level orchestration agent.
+        const { getTools } = await import('../../registry.js');
         const tools = getTools(model); 
         
         return await runSubAgent(query, {
@@ -48,6 +48,11 @@ Guidelines:
 - Always consider the currency context (BRL vs USD). PTAX is the reference for FX.
 - Use available tools to fetch data before answering.
 - Be concise but thorough in your analysis.
+
+**Market Context & Strategy**:
+- **Liquidity is King**: Always check average daily volume (ADTV). Avoid illiquid assets unless the user is sophisticated.
+- **Credit vs Equity**: When analyzing fixed income (CRA/CRI/Debentures), compare yield spreads against risk-free (NTN-B) and liquid alternatives (ETFs like IMAB11, KDIF11).
+- **Default Preference**: Favor liquid ETFs for credit exposure over single-name high-yield paper (CRAs), unless the yield premium is substantial (>1.5% over equivalent duration ETF).
 
 When users ask about "Petrobras", look for PETR3/PETR4.
 When users ask about "Vale", look for VALE3.

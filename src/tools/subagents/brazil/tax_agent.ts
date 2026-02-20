@@ -1,7 +1,7 @@
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { runSubAgent } from '../../../agent/subagent.js';
-import { getTools } from '../../registry.js';
+import { getTools } from '@/tools/registry.js';
 
 const TAX_AGENT_DESCRIPTION = `Use this tool for questions about Brazilian investment taxation (Imposto de Renda - IR).
 This agent is an expert on Receita Federal rules for:

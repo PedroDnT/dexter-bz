@@ -1,7 +1,6 @@
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { z } from 'zod';
 import { runSubAgent } from '../../../agent/subagent.js';
-import { getTools } from '../../registry.js';
 
 const EDUCATOR_AGENT_DESCRIPTION = `Use this tool when the user asks for an explanation of a financial concept, metric, or complex market mechanism.
 This agent is an expert teacher who:
@@ -43,6 +42,7 @@ Do not hallucinate data. If you need examples, use hypothetical numbers or well-
 
         // The educator doesn't strictly need external tools for definitions, but giving it search helps with niche topics.
         // We'll give it a light subset of tools if possible, or just the main ones.
+        const { getTools } = await import('../../registry.js');
         const tools = getTools(model); 
 
         return await runSubAgent(`Explain ${topic}`, {

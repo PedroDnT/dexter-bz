@@ -1,5 +1,5 @@
 ---
-name: dcf-valuation
+name: dcf
 description: Performs discounted cash flow (DCF) valuation analysis to estimate intrinsic value per share. Triggers when user asks for fair value, intrinsic value, DCF, valuation, "what is X worth", price target, undervalued/overvalued analysis, or wants to compare current price to fundamental value.
 ---
 
