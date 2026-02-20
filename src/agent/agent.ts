@@ -40,13 +40,13 @@ export class Agent {
   }
 
   /**
-   * Create a new Agent instance with tools.
+   * Create a new Agent instance with tools and prompt.
    */
-  static create(config: AgentConfig = {}): Agent {
+  static create(config: AgentConfig = {}, tools?: StructuredToolInterface[], systemPrompt?: string): Agent {
     const model = config.model ?? 'gpt-5.2';
-    const tools = getTools(model);
-    const systemPrompt = buildSystemPrompt(model);
-    return new Agent(config, tools, systemPrompt);
+    const agentTools = tools ?? getTools(model);
+    const agentPrompt = systemPrompt ?? buildSystemPrompt(model);
+    return new Agent(config, agentTools, agentPrompt);
   }
 
   /**

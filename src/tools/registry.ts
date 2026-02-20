@@ -1,6 +1,7 @@
 import { StructuredToolInterface } from '@langchain/core/tools';
 import { createFinancialSearch } from './finance/financial-search.js';
 import { createFinancialMetrics } from './finance/financial-metrics.js';
+import { createBrazilMarketAgent } from './subagents/brazil/market_agent.js';
 import { exaSearch } from './search/exa.js';
 import { tavilySearch } from './search/tavily.js';
 import { skillTool, SKILL_TOOL_DESCRIPTION } from './skill.js';
@@ -39,6 +40,11 @@ export function getToolRegistry(model: string): RegisteredTool[] {
       name: 'financial_metrics',
       tool: createFinancialMetrics(model),
       description: FINANCIAL_METRICS_DESCRIPTION,
+    },
+    {
+      name: 'ask_brazil_market_expert',
+      tool: createBrazilMarketAgent(model),
+      description: 'Consult a specialized sub-agent for complex queries about Brazilian markets (B3), companies, and filings.',
     },
   ];
 
