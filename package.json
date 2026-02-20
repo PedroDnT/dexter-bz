@@ -24,6 +24,7 @@
     "@langchain/openai": "^1.2.8",
     "@langchain/tavily": "^1.2.0",
     "adm-zip": "^0.5.16",
+    "arquero": "^8.0.3",
     "chalk": "^5.6.2",
     "dotenv": "^17.3.1",
     "exa-js": "^2.4.0",
@@ -33,6 +34,7 @@
     "ink-spinner": "^5.0.0",
     "langsmith": "^0.4.12",
     "papaparse": "^5.5.3",
+    "puppeteer": "^24.37.5",
     "react": "^19.2.4",
     "zod": "^4.3.6"
   },

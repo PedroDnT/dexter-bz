@@ -2,8 +2,12 @@ import { StructuredToolInterface } from '@langchain/core/tools';
 import { createFinancialSearch } from './finance/financial-search.js';
 import { createFinancialMetrics } from './finance/financial-metrics.js';
 import { createBrazilMarketAgent } from './subagents/brazil/market_agent.js';
+import { createBrazilTaxAgent } from './subagents/brazil/tax_agent.js';
 import { createFinancialEducatorAgent } from './subagents/educator/educator_agent.js';
 import { createPortfolioAdvisorAgent } from './subagents/advisor/portfolio_agent.js';
+import { createFeeCalculatorAgent } from './subagents/calculator/fee_agent.js';
+import { browsePage } from './search/browser.js';
+import { analyzeData } from './data/analysis.js';
 import { exaSearch } from './search/exa.js';
 import { tavilySearch } from './search/tavily.js';
 import { skillTool, SKILL_TOOL_DESCRIPTION } from './skill.js';
@@ -57,6 +61,26 @@ export function getToolRegistry(model: string): RegisteredTool[] {
       name: 'ask_portfolio_advisor',
       tool: createPortfolioAdvisorAgent(model),
       description: 'Analyze user portfolios, discuss allocation strategy, and suggest diversification (educational only).',
+    },
+    {
+      name: 'ask_brazil_tax_expert',
+      tool: createBrazilTaxAgent(model),
+      description: 'Analyze tax implications (IR, DARF, exemptions) for Brazilian investments (Stocks, FIIs, ETFs, Crypto).',
+    },
+    {
+      name: 'ask_fee_calculator',
+      tool: createFeeCalculatorAgent(model),
+      description: 'Calculate operational costs (B3 fees, fund admin fees, performance fees) to find true net returns.',
+    },
+    {
+      name: 'browse_page',
+      tool: browsePage,
+      description: 'Fetch web page content using a headless browser (Puppeteer) - use for JS-heavy sites or scraping.',
+    },
+    {
+      name: 'analyze_data',
+      tool: analyzeData,
+      description: 'Perform advanced data analysis (stats, moving averages, etc.) on JSON datasets.',
     },
   ];
 
