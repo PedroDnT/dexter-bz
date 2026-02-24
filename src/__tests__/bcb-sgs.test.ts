@@ -111,7 +111,7 @@ describe('BCB SGS provider', () => {
       try {
         await expect(
           fetchBcbSgs(189, '2023-01-01', '2023-01-31')
-        ).rejects.toThrow('BCB SGS API returned 503');
+        ).rejects.toThrow('HTTP 503');
       } finally {
         globalThis.fetch = originalFetch;
       }

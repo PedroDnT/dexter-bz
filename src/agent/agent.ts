@@ -91,16 +91,7 @@ export class Agent {
         }
 
         // Generate final answer with full context from scratchpad
-        const fullContext = await this.buildFullContextForAnswer(query, scratchpad);
-        const finalPrompt = buildFinalAnswerPrompt(query, fullContext);
-        
-        yield { type: 'answer_start' };
-        const finalResponse = await this.callModel(finalPrompt, false);
-        const answer = typeof finalResponse === 'string' 
-          ? finalResponse 
-          : extractTextContent(finalResponse);
-
-        yield { type: 'done', answer, toolCalls: scratchpad.getToolCallRecords(), iterations: iteration };
+        yield* this.yieldFinalAnswer(query, scratchpad, iteration);
         return;
       }
 
@@ -124,21 +115,7 @@ export class Agent {
     }
 
     // Max iterations reached - still generate proper final answer
-    const fullContext = await this.buildFullContextForAnswer(query, scratchpad);
-    const finalPrompt = buildFinalAnswerPrompt(query, fullContext);
-    
-    yield { type: 'answer_start' };
-    const finalResponse = await this.callModel(finalPrompt, false);
-    const answer = typeof finalResponse === 'string' 
-      ? finalResponse 
-      : extractTextContent(finalResponse);
-
-    yield {
-      type: 'done',
-      answer: answer || `Reached maximum iterations (${this.maxIterations}).`,
-      toolCalls: scratchpad.getToolCallRecords(),
-      iterations: iteration
-    };
+    yield* this.yieldFinalAnswer(query, scratchpad, iteration, `Reached maximum iterations (${this.maxIterations}).`);
   }
 
   /**
@@ -268,6 +245,35 @@ export class Agent {
       const errorSummary = `- ${toolDescription} [FAILED]: ${errorMessage}`;
       scratchpad.addToolResult(toolName, toolArgs, `Error: ${errorMessage}`, errorSummary);
     }
+  }
+
+  /**
+   * Generate and yield the final answer events (answer_start + done).
+   * Shared by normal completion and max-iterations paths.
+   *
+   * @param fallback - Optional fallback text when the LLM returns an empty answer.
+   */
+  private async *yieldFinalAnswer(
+    query: string,
+    scratchpad: Scratchpad,
+    iteration: number,
+    fallback?: string
+  ): AsyncGenerator<AgentEvent> {
+    const fullContext = await this.buildFullContextForAnswer(query, scratchpad);
+    const finalPrompt = buildFinalAnswerPrompt(query, fullContext);
+
+    yield { type: 'answer_start' };
+    const finalResponse = await this.callModel(finalPrompt, false);
+    const answer = typeof finalResponse === 'string'
+      ? finalResponse
+      : extractTextContent(finalResponse);
+
+    yield {
+      type: 'done',
+      answer: answer || fallback || '',
+      toolCalls: scratchpad.getToolCallRecords(),
+      iterations: iteration,
+    };
   }
 
   /**

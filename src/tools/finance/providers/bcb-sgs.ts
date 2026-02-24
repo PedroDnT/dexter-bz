@@ -5,6 +5,8 @@
  * Series IDs sourced from https://github.com/Tpessia/dados-financeiros
  */
 
+import { fetchJson } from '../../../utils/http.js';
+
 export interface BcbSgsPoint {
   date: string;  // YYYY-MM-DD
   value: number;
@@ -68,12 +70,7 @@ export async function fetchBcbSgs(
     `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${seriesId}/dados` +
     `?formato=json&dataInicial=${dataInicial}&dataFinal=${dataFinal}`;
 
-  const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
-  if (!response.ok) {
-    throw new Error(`BCB SGS API returned ${response.status} for series ${seriesId}`);
-  }
-
-  const raw = (await response.json()) as BcbRawPoint[];
+  const raw = await fetchJson<BcbRawPoint[]>(url, 15000);
   if (!Array.isArray(raw)) {
     throw new Error(`BCB SGS: unexpected response shape for series ${seriesId}`);
   }
