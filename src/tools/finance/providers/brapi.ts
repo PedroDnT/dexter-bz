@@ -1,3 +1,5 @@
+import { fetchJson } from '../../../utils/http.js';
+
 interface BrapiResponse {
   results?: unknown[];
   [key: string]: unknown;
@@ -38,10 +40,6 @@ export async function getBrapiQuote(
   if (options.range) url.searchParams.set('range', options.range);
   if (options.interval) url.searchParams.set('interval', options.interval);
 
-  const response = await fetch(url.toString());
-  if (!response.ok) {
-    throw new Error(`BRAPI request failed: ${response.status} ${response.statusText}`);
-  }
-  const data = (await response.json()) as BrapiResponse;
+  const data = await fetchJson<BrapiResponse>(url.toString());
   return { data, url: url.toString() };
 }

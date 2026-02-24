@@ -1,3 +1,5 @@
+import { fetchJson } from '../../../utils/http.js';
+
 export interface PtaxRate {
   usd_brl: number;
   timestamp: string;
@@ -67,11 +69,7 @@ async function fetchFromBcb(): Promise<PtaxRate> {
     `${baseUrl}(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)` +
     `?@dataInicial='${dataInicial}'&@dataFinalCotacao='${dataFinal}'&$top=100&$format=json`;
 
-  const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
-  if (!response.ok) {
-    throw new Error(`BCB PTAX API returned ${response.status}`);
-  }
-  const json = (await response.json()) as PtaxResponse;
+  const json = await fetchJson<PtaxResponse>(url, 10000);
   const items = Array.isArray(json.value) ? json.value : [];
   const selected = selectLatestPtax(items);
   return {
@@ -82,11 +80,7 @@ async function fetchFromBcb(): Promise<PtaxRate> {
 
 async function fetchFromAwesomeApi(): Promise<PtaxRate> {
   const url = 'https://economia.awesomeapi.com.br/json/last/USD-BRL';
-  const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
-  if (!response.ok) {
-    throw new Error(`AwesomeAPI returned ${response.status}`);
-  }
-  const json = await response.json() as { USDBRL?: { bid?: string; ask?: string; create_date?: string } };
+  const json = await fetchJson<{ USDBRL?: { bid?: string; ask?: string; create_date?: string } }>(url, 10000);
   const data = json.USDBRL;
   if (!data?.ask) {
     throw new Error('AwesomeAPI: missing ask price');
@@ -100,11 +94,7 @@ async function fetchFromAwesomeApi(): Promise<PtaxRate> {
 
 async function fetchFromExchangeRateApi(): Promise<PtaxRate> {
   const url = 'https://api.exchangerate-api.com/v4/latest/USD';
-  const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
-  if (!response.ok) {
-    throw new Error(`ExchangeRate-API returned ${response.status}`);
-  }
-  const json = await response.json() as { rates?: { BRL?: number }; date?: string };
+  const json = await fetchJson<{ rates?: { BRL?: number }; date?: string }>(url, 10000);
   const rate = json.rates?.BRL;
   if (!rate) {
     throw new Error('ExchangeRate-API: missing BRL rate');
