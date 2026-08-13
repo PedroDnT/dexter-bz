@@ -1,71 +1,58 @@
-# Dexter 🤖
+# Dexter BZ 🤖
 
-An autonomous financial research agent that thinks, plans, and learns. Built specifically for financial research using task planning, self-reflection, and real-time market data.
-An autonomous financial research agent that thinks, plans, and learns. Dexter performs deep financial analysis using task planning, self-reflection, and real-time market data.
+> **Built on [virattt/dexter](https://github.com/virattt/dexter)** by [@virattt](https://github.com/virattt).
+> The autonomous research agent — task planning, self-reflection, self-validation, the tool
+> loop and the CLI — is his work, used here under the MIT License.
+>
+> This repository adds a **Brazil market layer** on top of it:
+> a CVM filings provider, BCB/PTAX FX normalisation, BRAPI/B3 pricing, key ratios,
+> segments, insider trades, a fraud/anomaly screening pipeline, and a portfolio
+> performance analyser. See [What this fork adds](#what-this-fork-adds).
+
+An autonomous financial research agent that thinks, plans, and learns. Dexter decomposes
+complex financial questions into research plans, executes them against live market data,
+and validates its own results until it can give a data-backed answer.
 
 <img width="1098" height="659" alt="Dexter interface" src="https://github.com/user-attachments/assets/3bcc3a7f-b68a-4f5e-8735-9d22196ff76e" />
 
-## Features
+## Contents
 
-- 🧠 **Intelligent Task Planning** - Automatically decomposes complex queries into research steps
-- 🔄 **Autonomous Execution** - Selects and executes the right tools to gather financial data
-- ✅ **Self-Validation** - Checks its own work and iterates until complete
-- 📊 **Real-Time Data** - Access to fundamentals, prices, filings, and market data
-- 🌎 **Brazil Support** - First-class support for B3 market data and CVM filings
-- 🕵️ **Fraud Detection** - Built-in pipeline for anomaly screening and red-flag detection
-- ��️ **Safety Features** - Loop detection and step limits prevent runaway execution
-- 📈 **Portfolio Analytics** - Analyze portfolio performance vs benchmarks with dollarized returns, Sharpe ratio, and drawdowns
-
-[![Twitter Follow](https://img.shields.io/twitter/follow/virattt?style=social)](https://twitter.com/virattt)
-
-## Quick Start
-
-### Prerequisites
-
-- [Bun](https://bun.com) v1.0+ ([install guide](https://bun.com/docs/installation))
-- [OpenAI API key](https://platform.openai.com/api-keys)
-- [Financial Datasets API key](https://financialdatasets.ai)
-
-### Installation
-
-- [Overview](#overview)
-- [Prerequisites](#prerequisites)
+- [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Features](#features)
-- [Contributing](#contributing)
+- [What this fork adds](#what-this-fork-adds)
+- [Development](#development)
+- [Documentation](#documentation)
+- [Credits](#credits)
 - [License](#license)
 
-## Overview
+## Features
 
-Dexter transforms complex financial questions into actionable research plans, executes them using live market data, and validates results until confident, data-backed answers emerge.
+- 🧠 **Intelligent Task Planning** — decomposes complex queries into research steps
+- 🔄 **Autonomous Execution** — selects and executes the right tools to gather financial data
+- ✅ **Self-Validation** — checks its own work and iterates until complete
+- 📊 **Real-Time Data** — fundamentals, prices, filings, and market data
+- 🌎 **Brazil Support** — B3 market data and CVM filings as first-class sources
+- 🕵️ **Fraud Screening** — pipeline for anomaly detection and red flags
+- 🛡️ **Safety Features** — loop detection and step limits prevent runaway execution
+- 📈 **Portfolio Analytics** — performance vs benchmarks with dollarised returns, Sharpe, drawdowns
 
-**Key Features:**
-- Autonomous task planning and execution
-- Self-validation and iterative refinement
-- Real-time access to financial statements and market data
-- Support for US and Brazilian (B3) markets
-- Built-in safety limits and loop detection
-
-[![Twitter Follow](https://img.shields.io/twitter/follow/virattt?style=social)](https://twitter.com/virattt)
-
-<img width="875" height="558" alt="Screenshot 2026-01-21 at 5 22 19 PM" src="https://github.com/user-attachments/assets/72d28363-69ea-4c74-a297-dfa60aa347f7" />
-
-
-## Prerequisites
-
-- [Bun](https://bun.sh) v1.0+ ([installation guide](https://bun.sh))
-- [OpenAI API key](https://platform.openai.com/api-keys)
-- [Financial Datasets API key](https://financialdatasets.ai)
-- Optional: [Exa API key](https://exa.ai) for web search
+<img width="875" height="558" alt="Dexter session" src="https://github.com/user-attachments/assets/72d28363-69ea-4c74-a297-dfa60aa347f7" />
 
 ## Installation
 
-1. Clone and install:
+### Prerequisites
+
+- [Bun](https://bun.sh) v1.0+ ([installation guide](https://bun.sh/docs/installation))
+- [OpenAI API key](https://platform.openai.com/api-keys)
+- [Financial Datasets API key](https://financialdatasets.ai)
+- Optional: [Exa API key](https://exa.ai) for web search
+- Optional: [BRAPI token](https://brapi.dev) for B3 pricing
+- Optional: Python 3, for the Yahoo Finance bridge used by some B3 lookups
+
 ```bash
-# Clone and install
-git clone https://github.com/virattt/dexter.git
-cd dexter
+git clone https://github.com/PedroDnT/dexter-bz.git
+cd dexter-bz
 bun install
 
 # Set up environment
@@ -73,177 +60,137 @@ cp env.example .env
 # Edit .env and add your OPENAI_API_KEY and FINANCIAL_DATASETS_API_KEY
 ```
 
-### Usage
+For Brazil coverage:
+
+```bash
+# Add BRAPI_TOKEN=your-token to .env
+pip install -r scripts/yfinance/requirements.txt
+```
+
+## Usage
 
 ```bash
 bun start                # Interactive mode
 bun dev                  # Development mode with watch
-bun run investigate      # Run fraud screening pipeline
+bun run investigate      # Run the fraud screening pipeline
 ```
 
-## Advanced Features
+## What this fork adds
 
-### 🇧🇷 Brazil (B3) Market Support
+Everything below is specific to this repository and does not exist upstream.
 
-Dexter includes first-class support for Brazilian stocks with data from BRAPI and Yahoo Finance.
+### 🇧🇷 Brazil (B3) market support
 
-**Setup:**
+Brazilian equities via BRAPI and Yahoo Finance, with CVM as the filings source.
+
+| Capability | Implementation |
+|---|---|
+| CVM filings (DFP / ITR / FRE / IPE) | `src/tools/finance/providers/cvm.ts` |
+| PTAX + BCB SGS series | `src/tools/finance/providers/ptax.ts`, `providers/bcb-sgs.ts` |
+| BRAPI / B3 pricing | `src/tools/finance/providers/brapi.ts`, `providers/yfinance.ts` |
+| Key ratios | `src/tools/finance/key-ratios.ts` |
+| Segments | `src/tools/finance/segments.ts` |
+| Insider trades | `src/tools/finance/insider_trades.ts` |
+| Brazilian bonds, macro series | `src/tools/finance/brazil-bonds.ts`, `macro-series.ts` |
+
+All Brazil outputs carry both BRL and USD values using the latest PTAX (BCB) rate, with a
+BCB → AwesomeAPI → ExchangeRate-API fallback chain.
+
+**Known coverage gaps** — segmented revenue has no reliable structured source, and IPE
+filings do not map cleanly onto insider transactions. Both tools record the gap rather
+than guessing. See [BRAZIL_FEATURES.md](BRAZIL_FEATURES.md).
+
+### 🕵️ Fraud & anomaly screening
+
+Automated red-flag screening over public market data (`src/pipelines/`):
+
 ```bash
-# Add to .env
-BRAPI_TOKEN=your-token
-
-# Install Python dependencies
-pip install -r scripts/yfinance/requirements.txt
-```
-
-All Brazil outputs include both BRL and USD values using the latest PTAX (BCB) exchange rate. See [BRAZIL_FEATURES.md](BRAZIL_FEATURES.md) for details.
-
-### 🕵️ Fraud & Anomaly Screening
-
-Run automated red-flag detection across financial statements:
-
-Development mode with auto-reload:
-```bash
-bun dev
-```
-
-### 📈 Portfolio Performance Analyzer
-
-Ask Dexter to evaluate how a portfolio has performed versus benchmarks over time.
-
-Dexter can:
-- Aggregate holdings into a portfolio based on tickers and weights
-- Fetch historical prices and build a unified return series
-- Compare performance versus benchmarks like S&P 500 (SPY) or Ibovespa (BOVA11)
-- Compute common metrics: total and annualized return, volatility, Sharpe ratio, and max drawdown
-- Produce a dollarized view for Brazilian assets when PTAX data is available
-
-Example prompts (from the interactive CLI):
-- "Analyze this portfolio vs S&P 500 from 2020 to today: AAPL 60%, MSFT 40%"
-- "How has my Brazil portfolio (PETR4 40%, VALE3 30%, BOVA11 30%) done vs Ibovespa?"
-
-Under the hood, Dexter uses dedicated portfolio tools and skills (see src/skills/portfolio-performance/SKILL.md) to structure the analysis and interpret the metrics.
-
-## Features
-
-### 🇧🇷 Brazil (B3) Market Support
-
-Access Brazilian market data via BRAPI and Yahoo Finance:
-- Set `BRAPI_TOKEN` in `.env`
-- Install Python dependencies: `pip install -r scripts/yfinance/requirements.txt`
-- Outputs include both BRL and USD values (using latest PTAX rate)
-
-See [BRAZIL_FEATURES.md](BRAZIL_FEATURES.md) for details.
-
-### 🕵️ Fraud/Anomaly Screening
-
-Run automated red-flag screening on public market data:
-```bash
-bun run investigate --open              # All targets + open reports
+bun run investigate --open               # All targets, then open the reports
 bun run investigate --target AAPL        # Single ticker
 bun run investigate --targets AAPL,MSFT  # Multiple tickers
 ```
 
-Reports are saved to `.dexter/reports/` with HTML visualizations of detected anomalies.
+Generates HTML reports in `.dexter/reports/` covering earnings-quality ratios, revenue
+and receivables trends, balance-sheet anomalies, and cash-flow patterns.
 
-**Note**: This is heuristic screening, not proof of fraud. Always verify findings with primary sources.
+> **Note:** this is heuristic screening, not proof of fraud. Always verify findings
+> against primary sources.
+
+### 📈 Portfolio performance analyser
+
+Evaluates how a portfolio performed against benchmarks over time
+(`src/tools/finance/portfolio-performance.ts`, `portfolio-math.ts`):
+
+- Aggregates holdings from tickers and weights into a unified return series
+- Compares against benchmarks such as S&P 500 (SPY) or Ibovespa (BOVA11)
+- Computes total and annualised return, volatility, Sharpe ratio, and max drawdown
+- Produces a dollarised view for Brazilian assets when PTAX data is available
+
+Example prompts from the interactive CLI:
+
+- *"Analyze this portfolio vs S&P 500 from 2020 to today: AAPL 60%, MSFT 40%"*
+- *"How has my Brazil portfolio (PETR4 40%, VALE3 30%, BOVA11 30%) done vs Ibovespa?"*
+
+See `src/skills/portfolio-performance/SKILL.md`.
 
 ## Development
 
-### Testing & Evaluation
-
 ```bash
-bun test                        # Run test suite
-bun run typecheck              # TypeScript type checking
-bun run src/evals/run.ts       # Run evaluation suite
+bun test            # Run the test suite
+bun run typecheck   # TypeScript type checking
 ```
-
-The evaluation suite tests Dexter against financial questions using LangSmith tracking and LLM-as-judge scoring.
 
 ### Debugging
 
-All tool calls are logged to `.dexter/scratchpad/<timestamp>.jsonl` for debugging:
+All tool calls are logged to `.dexter/scratchpad/<timestamp>.jsonl`:
 
 ```json
-{"type":"tool_result","timestamp":"2026-01-30T11:14:05.123Z","toolName":"get_income_statements","args":{"ticker":"AAPL"},"result":{...},"llmSummary":"Retrieved 5 years of Apple data..."}
+{"type":"tool_result","timestamp":"2026-01-30T11:14:05.123Z","toolName":"get_income_statements","args":{"ticker":"AAPL"},"result":{},"llmSummary":"Retrieved 5 years of Apple data..."}
 ```
 
-Each entry shows the tool name, arguments, raw results, and LLM interpretation.
+Each entry shows the tool name, arguments, raw results, and the model's interpretation.
 
 ### Configuration
 
-Optional environment variables for advanced features:
+Optional environment variables:
 
 ```bash
-# AI Providers (choose one or more)
+# AI providers (choose one or more)
 ANTHROPIC_API_KEY=sk-...        # Claude models
 GOOGLE_API_KEY=...              # Gemini models
 XAI_API_KEY=...                 # Grok models
 OPENROUTER_API_KEY=...          # OpenRouter
 OLLAMA_BASE_URL=http://...      # Local Ollama
 
-# Web Search (optional)
+# Web search (optional)
 EXASEARCH_API_KEY=...           # Exa search (preferred)
 TAVILY_API_KEY=...              # Tavily search (fallback)
 
-# Evaluation
-LANGSMITH_API_KEY=...           # For eval tracking
+# Brazil (optional)
+BRAPI_TOKEN=...                 # B3 pricing
 ```
-
-## Contributing
-
-Contributions are welcome! Please keep PRs small and focused.
-Generates HTML reports in `.dexter/reports/` analyzing:
-- Earnings quality ratios
-- Revenue and receivables trends
-- Balance sheet anomalies
-- Cash flow patterns
-
-**Note**: Results are heuristic screening, not proof of fraud. Verify findings with primary sources.
-
-### 📊 Evaluation Suite
-
-Test agent performance against financial questions:
-```bash
-bun run src/evals/run.ts              # Run all questions
-bun run src/evals/run.ts --sample 10  # Sample 10 questions
-```
-
-Uses LLM-as-judge scoring with LangSmith tracking.
-
-### 🐛 Debugging
-
-All agent activity is logged to `.dexter/scratchpad/*.jsonl` with:
-- Query inputs
-- Tool calls and results
-- Reasoning steps
-
-Example:
-```json
-{"type":"tool_result","toolName":"get_income_statements","args":{"ticker":"AAPL"},"llmSummary":"Retrieved 5 years of Apple income statements..."}
-```
-
-## Contributing
-
-Contributions welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
 
 ## Documentation
 
-- [CLAUDE.md](CLAUDE.md) - Complete architecture and developer guide
-- [BRAZIL_FEATURES.md](BRAZIL_FEATURES.md) - Brazil market feature coverage
+- [CLAUDE.md](CLAUDE.md) — architecture and developer guide
+- [BRAZIL_FEATURES.md](BRAZIL_FEATURES.md) — Brazil market feature coverage and known gaps
+
+## Contributing
+
+Contributions welcome. Please keep PRs small and focused, and run `bun test` before
+submitting.
+
+## Credits
+
+This project is built on **[virattt/dexter](https://github.com/virattt/dexter)** by
+[Virat Singh](https://github.com/virattt) — the agent architecture, planning loop,
+self-validation, tool dispatch and terminal UI originate there and remain his work.
+
+This fork contributes the Brazil market layer described in
+[What this fork adds](#what-this-fork-adds).
 
 ## License
 
-MIT License - see LICENSE file for details.
-3. Keep PRs small and focused
-4. Run tests: `bun test`
-
-For technical details, see [CLAUDE.md](CLAUDE.md).
-
-## License
-
-MIT License
+MIT — see [LICENSE](LICENSE). The original work is Copyright (c) virattt; the Brazil
+market additions in this repository are Copyright (c) 2026 Pedro Domingues. Both are
+released under the MIT License.
